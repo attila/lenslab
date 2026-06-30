@@ -1,0 +1,19 @@
+[package]
+name = "lenslab-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "lenslab command-line interface"
+
+[[bin]]
+name = "lenslab"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+lenslab-core = { path = "../lenslab-core", version = "0.1.0" }
+lenslab-decode = { path = "../lenslab-decode", version = "0.1.0" }

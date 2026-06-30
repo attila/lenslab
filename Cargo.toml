@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = ["lenslab-cli", "lenslab-core", "lenslab-decode"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/attila/lenslab"
+rust-version = "1.95"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"
