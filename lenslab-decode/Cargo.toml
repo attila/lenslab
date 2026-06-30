@@ -11,3 +11,11 @@ description = "lenslab raw decode backend (LGPL-2.1 boundary, see NOTICE)"
 workspace = true
 
 [dependencies]
+exif.workspace = true
+rawler.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tiff.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

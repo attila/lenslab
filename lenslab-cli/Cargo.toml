@@ -16,5 +16,8 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
+anyhow.workspace = true
+clap.workspace = true
 lenslab-core = { path = "../lenslab-core" }
 lenslab-decode = { path = "../lenslab-decode" }
+serde_json.workspace = true
