@@ -13,7 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- _(none yet)_
+- **Configure the `release` GitHub Environment** — required reviewers + tag deployment policy, the
+  one-time manual prerequisite the `release` workflow's `publish` job depends on. Steps are in
+  `docs/release-process.md`. Until this is done, do not push a `v*` tag: `release.yml` will either
+  fail at the gate or, worse, publish unprotected if GitHub auto-creates the environment
+  unconfigured on first reference.
+  - _Depends on:_ CI and release workflows.
+  - _Done when:_ both halves of the `gh api .../environments/release` verification command in
+    `docs/release-process.md` show the required reviewer and the `v*` tag deployment policy in
+    place.
 
 ## In Progress
 
@@ -25,11 +33,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   `lenslab`), wired with the licence boundaries from `docs/DECISIONS.md` (LGPL confined to
   `lenslab-decode`). `just ci` green on the empty-but-wired workspace.
 - **CI and release workflows** — `.github/workflows/ci.yml` runs `just ci` plus a four-target
-  cross-compile matrix on every push and pull request to `main`. `.github/workflows/release.yml`
-  cuts a tagged release (`verify` → `build` → owner-approval-gated `publish`), backed by
-  `CHANGELOG.md`, `scripts/release-prep.sh`, and `docs/release-process.md`. The `release` GitHub
-  Environment (required reviewers + tag deployment policy) is a one-time manual prerequisite — see
-  `docs/release-process.md` — not yet configured.
+  cross-compile matrix on every push and pull request to `main`, gated by an aggregator `ci` job.
+  `.github/workflows/release.yml` cuts a tagged release (`verify` → `build` → owner-approval-gated
+  `publish`), backed by `CHANGELOG.md`, `scripts/release-prep.sh`, and `docs/release-process.md`.
+  _Done when:_ both workflow files exist and `just ci` runs green in GitHub Actions on this change's
+  own pull request — met. The release pipeline's manual prerequisite (the `release` GitHub
+  Environment) is **not yet configured**; see the "Up Next" item above before ever pushing a `v*`
+  tag.
 
 ## Deferred / known gaps
 

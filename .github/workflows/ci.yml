@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Every job here only checks out and builds/lints/tests; none of them push,
+# release, or otherwise mutate repo state, so contents: read is sufficient.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -112,12 +117,12 @@ jobs:
     needs: [fmt, clippy, test, deny, doc, cross-compile]
     if: always()
     steps:
+      # Derives the per-job results directly from the `needs` context instead
+      # of re-listing job names by hand in a second place. A job added to
+      # `needs:` above is automatically checked here — no second list to keep
+      # in sync, so a job that's missing from a hand-written list can't make
+      # this report success while it actually failed.
       - name: Check all jobs
-        run: |
-          results=("${{ needs.fmt.result }}" "${{ needs.clippy.result }}" "${{ needs.test.result }}" "${{ needs.deny.result }}" "${{ needs.doc.result }}" "${{ needs.cross-compile.result }}")
-          for r in "${results[@]}"; do
-            if [[ "$r" != "success" ]]; then
-              echo "Job failed with result: $r"
-              exit 1
-            fi
-          done
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+        run: echo "$NEEDS_CONTEXT" | jq -e 'all(.[]; .result == "success")'
