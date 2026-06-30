@@ -1,0 +1,33 @@
+/target
+/out
+
+# Keep Cargo.lock for the bin crate later; ignored until crates exist.
+Cargo.lock
+
+**/*.rs.bk
+*.pdb
+
+# decoded scratch
+*.raw
+
+# cargo-zigbuild scratch file (Apple linker workaround for empty rlibs).
+.intentionally-empty-file.o
+
+# insta snapshot review staging file (for `cargo insta review`)
+*.pending-snap
+
+# Throwaway scratch (see AGENTS.md "Working model")
+/tmp/
+
+# Compound engineering local artefacts (not source)
+.context/
+
+.DS_Store
+
+.env
+.env.*
+*.key
+*.pem
+
+# Personal/per-machine Claude settings — never commit (committed settings.json is shared)
+.claude/settings.local.json

@@ -1,0 +1,25 @@
+lenslab
+Copyright (c) 2026 the lenslab authors
+
+The crates `lenslab-core` and `lenslab-cli` are licensed under your choice of
+MIT (LICENSE-MIT) or Apache-2.0 (LICENSE-APACHE).
+
+THIRD-PARTY / COMBINED-BINARY NOTICE
+------------------------------------
+The `lenslab` binary statically links the `rawler` crate (and, transitively,
+`rawloader`), which are licensed under LGPL-2.1. Because they are statically
+linked, the distributed `lenslab` binary is a combined work governed, for
+redistribution, by the terms of LGPL-2.1.
+
+This obligation is satisfied by this project being fully open source: the
+complete corresponding source — including build instructions — is published in
+this repository, so any recipient of a `lenslab` binary can rebuild it against a
+modified version of `rawler`/`rawloader`.
+
+The LGPL-licensed decode code is confined to the `lenslab-decode` crate. Anyone
+wishing to ship a binary whose non-decode portions remain unencumbered can
+replace `lenslab-decode` with the permissive DNG/TIFF-only backend (see
+docs/DECISIONS.md, option (c)) without touching the rest of the workspace.
+
+rawler:    https://crates.io/crates/rawler        (LGPL-2.1)
+rawloader: https://github.com/pedrocr/rawloader   (LGPL-2.1)
