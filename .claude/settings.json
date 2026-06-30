@@ -3,6 +3,10 @@
     "pr": "",
     "sessionUrl": false
   },
+  "env": {
+    "RUST_BACKTRACE": "1",
+    "CARGO_TERM_COLOR": "always"
+  },
   "extraKnownMarketplaces": {
     "compound-engineering-plugin": {
       "source": {
