@@ -1,9 +1,6 @@
 /target
 /out
 
-# Keep Cargo.lock for the bin crate later; ignored until crates exist.
-Cargo.lock
-
 **/*.rs.bk
 *.pdb
 

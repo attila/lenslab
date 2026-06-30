@@ -13,10 +13,6 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Scaffold the Cargo workspace** — create `lenslab-core`, `lenslab-cli`, and `lenslab-decode` with
-  the licence boundaries from `docs/DECISIONS.md` (LGPL confined to `lenslab-decode`).
-  - _Depends on:_ nothing.
-  - _Done when:_ `just ci` runs green on an empty-but-wired workspace.
 - **CI and release workflows** — add `.github/workflows/` once the workspace builds a binary
   (deferred from initial setup, since both reference a binary that does not exist yet).
   - _Depends on:_ Cargo workspace scaffold.
@@ -28,7 +24,9 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Done
 
-- _(nothing committed yet)_
+- **Scaffold the Cargo workspace** — `lenslab-core`, `lenslab-decode`, `lenslab-cli` (binary
+  `lenslab`), wired with the licence boundaries from `docs/DECISIONS.md` (LGPL confined to
+  `lenslab-decode`). `just ci` green on the empty-but-wired workspace.
 
 ## Deferred / known gaps
 

@@ -7,6 +7,7 @@ unmaintained = "workspace"
 yanked = "deny"
 
 [licenses]
+private = { ignore = true }
 confidence-threshold = 0.93
 allow = [
     "MIT",
@@ -27,6 +28,7 @@ allow = [
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"
