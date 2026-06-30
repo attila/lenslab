@@ -13,10 +13,7 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **CI and release workflows** — add `.github/workflows/` once the workspace builds a binary
-  (deferred from initial setup, since both reference a binary that does not exist yet).
-  - _Depends on:_ Cargo workspace scaffold.
-  - _Done when:_ CI runs `just ci` on push and pull request and is green.
+- _(none yet)_
 
 ## In Progress
 
@@ -27,6 +24,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 - **Scaffold the Cargo workspace** — `lenslab-core`, `lenslab-decode`, `lenslab-cli` (binary
   `lenslab`), wired with the licence boundaries from `docs/DECISIONS.md` (LGPL confined to
   `lenslab-decode`). `just ci` green on the empty-but-wired workspace.
+- **CI and release workflows** — `.github/workflows/ci.yml` runs `just ci` plus a four-target
+  cross-compile matrix on every push and pull request to `main`. `.github/workflows/release.yml`
+  cuts a tagged release (`verify` → `build` → owner-approval-gated `publish`), backed by
+  `CHANGELOG.md`, `scripts/release-prep.sh`, and `docs/release-process.md`. The `release` GitHub
+  Environment (required reviewers + tag deployment policy) is a one-time manual prerequisite — see
+  `docs/release-process.md` — not yet configured.
 
 ## Deferred / known gaps
 
