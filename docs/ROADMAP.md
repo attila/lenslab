@@ -13,10 +13,24 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
+- **Real DNG fixture + `RawlerDecoder` validation** — owner to supply a real camera DNG (plus its
+  ground-truth camera/lens/exposure values, and — separately — a call on how a raw file gets into
+  the repo: committed directly, Git LFS, or an external fixture store, since camera raws run tens of
+  MB) so `RawlerDecoder` gets exercised end-to-end for the first time; currently it is only built
+  against `rawler`'s documented API with no real file to decode (`docs/ROADMAP.md`'s prior "No DNG
+  decode fixture" gap, now unblocked). To be specced in a follow-up session, not assumed here.
+  - _Depends on:_ Decode backend + `lenslab inspect`; owner supplies the file and its expected
+    values.
+  - _Done when:_ `lenslab inspect` against the real DNG is asserted against known-correct
+    camera/lens/dimensions/black-and-white-level/CFA-pattern values in a test, and — if the sample
+    carries baked-in DNG opcode lists — the corrections-present detection is exercised against a
+    real positive case too (currently only tested against their absence).
 - **Image model + zone geometry** — `lenslab-core::image` (`LinearImage`/`CfaImage`, planes,
   metadata), single-green-plane extraction, and zone geometry (`docs/ALGORITHMS.md` §Channel,
-  §Zones). First step that needs real pixel data rather than just decode metadata.
-  - _Depends on:_ Decode backend + `lenslab inspect`.
+  §Zones). First step that needs real pixel data rather than just decode metadata — a real DNG to
+  decode and check the extraction against de-risks this before it's picked up.
+  - _Depends on:_ Decode backend + `lenslab inspect`. Benefits from, but does not strictly require,
+    the real DNG fixture above landing first.
   - _Done when:_ a decoded frame can be split into the default 5-point zone layout with patch
     sizing, covered by a unit test.
 
@@ -48,20 +62,14 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   1). `TiffDecoder` is covered by an integration test against a synthetic TIFF fixture written with
   the `tiff` crate's own encoder (including a regression test for multi-channel `BitsPerSample`,
   caught by manually running the built binary before committing). `RawlerDecoder` has no equivalent
-  fixture yet — see deferred gaps below.
+  fixture yet — no camera raw exists in this repository, and `rawler`'s own crates.io package ships
+  only digest/metadata files for its test corpus, not the raw samples themselves; see "Real DNG
+  fixture" above, now the next item up.
 
 ## Deferred / known gaps
 
 Carried from initial workspace setup; revisit when the noted condition is met.
 
-- **No DNG decode fixture** — `RawlerDecoder` (the LGPL `rawler` path) has no real or synthetic DNG
-  to test against: no camera raw exists in this repository, and `rawler`'s own crates.io package
-  ships only digest/metadata files for its test corpus, not the raw samples themselves. The
-  implementation is built strictly against `rawler`'s public, documented API
-  (`raw_image`/`raw_metadata`/`ifd`), mirroring the access patterns `rawler`'s own DNG decoder uses
-  internally, but it has not been exercised end-to-end. Revisit when building the synthetic-fixture
-  generator for measurement validation (`docs/GENESIS.md` step 7) — a minimal synthetic DNG would
-  cover both needs.
 - **`RawlerDecoder::inspect` always fully decompresses** — `raw_image(.., dummy: false)` is called
   unconditionally even though `inspect` never reads pixel data. Checked against `rawler` 0.7.2:
   passing `dummy: true` is honoured for NEF/ARW/CR3/RAF (their decoders skip decompression and leave
