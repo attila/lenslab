@@ -83,10 +83,11 @@ fn ascii_field(exif: &exif::Exif, tag: exif::Tag) -> Option<String> {
 }
 
 fn rational_field(exif: &exif::Exif, tag: exif::Tag) -> Option<f32> {
-    match &exif.get_field(tag, exif::In::PRIMARY)?.value {
-        exif::Value::Rational(values) => values.first().map(exif::Rational::to_f32),
-        _ => None,
-    }
+    let value = match &exif.get_field(tag, exif::In::PRIMARY)?.value {
+        exif::Value::Rational(values) => values.first().map(exif::Rational::to_f32)?,
+        _ => return None,
+    };
+    value.is_finite().then_some(value)
 }
 
 fn uint_field(exif: &exif::Exif, tag: exif::Tag) -> Option<u32> {

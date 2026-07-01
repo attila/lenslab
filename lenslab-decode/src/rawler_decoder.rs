@@ -62,9 +62,24 @@ impl Decoder for RawlerDecoder {
             ),
             white_level: Some(image.whitelevel.as_vec()),
             exposure: ExposureInfo {
-                focal_length_mm: metadata.exif.focal_length.as_ref().map(Rational::as_f32),
-                f_number: metadata.exif.fnumber.as_ref().map(Rational::as_f32),
-                exposure_time_s: metadata.exif.exposure_time.as_ref().map(Rational::as_f32),
+                focal_length_mm: metadata
+                    .exif
+                    .focal_length
+                    .as_ref()
+                    .map(Rational::as_f32)
+                    .filter(|value| value.is_finite()),
+                f_number: metadata
+                    .exif
+                    .fnumber
+                    .as_ref()
+                    .map(Rational::as_f32)
+                    .filter(|value| value.is_finite()),
+                exposure_time_s: metadata
+                    .exif
+                    .exposure_time
+                    .as_ref()
+                    .map(Rational::as_f32)
+                    .filter(|value| value.is_finite()),
                 iso: metadata
                     .exif
                     .iso_speed
@@ -77,7 +92,7 @@ impl Decoder for RawlerDecoder {
 
 fn non_empty(value: &str) -> Option<String> {
     let trimmed = value.trim();
-    (!trimmed.is_empty()).then(|| value.to_owned())
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
 }
 
 /// DNG opcode lists (tags 51008/51009/51022) carry baked-in per-pixel corrections — lens
@@ -102,5 +117,21 @@ fn dng_corrections(decoder: &dyn RawlerTrait) -> Corrections {
     Corrections {
         present: Some(!detail.is_empty()),
         detail,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::non_empty;
+
+    #[test]
+    fn non_empty_trims_the_returned_value() {
+        assert_eq!(non_empty("  PENTAX 645D  ").as_deref(), Some("PENTAX 645D"));
+    }
+
+    #[test]
+    fn non_empty_treats_whitespace_only_as_absent() {
+        assert_eq!(non_empty("   "), None);
+        assert_eq!(non_empty(""), None);
     }
 }
