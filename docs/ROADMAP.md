@@ -72,3 +72,10 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   black-level) when `dummy` is set — getting that wrong would silently fabricate a "measured" value,
   which is worse than the current correctness-first slowness. Revisit with that audit done per
   format.
+- **macOS binaries are unsigned** — the cross-compile matrix and release pipeline produce
+  `aarch64-apple-darwin`/`x86_64-apple-darwin` binaries with no Developer ID signature or
+  notarization, so Gatekeeper quarantine-blocks them by default on download (a manual
+  right-click-Open or `xattr -d com.apple.quarantine` override is needed). Owner has an Apple
+  Developer Program membership to wire in when this is picked up; revisit alongside
+  `docs/release-process.md` before macOS binaries are meant for anyone other than the owner
+  building/running them directly.
