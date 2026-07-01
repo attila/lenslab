@@ -1,5 +1,12 @@
+# Keep this list in sync with .github/workflows/ci.yml's cross-compile matrix — a target built
+# there but missing here ships with no licence/advisory audit for its dependency graph.
 [graph]
-targets = ["x86_64-unknown-linux-gnu"]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
 all-features = true
 
 [advisories]

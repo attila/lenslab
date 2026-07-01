@@ -75,6 +75,25 @@ corrections; detect and refuse/warn on baked-in corrections (DNG opcodes / TIFF 
 **Why:** Physical, reproducible numbers. Cooked input silently invalidates vignetting and sharpness.
 This is non-negotiable and must be enforced at ingest.
 
+## D9 — macOS cross-compile SDK: `phracker/MacOSX-SDKs`, pinned at 11.3
+
+**Options:** (a) No macOS cross-compile — Apple Silicon/Intel Mac binaries only ship from a real
+macOS runner. (b) `cargo-zigbuild` cross-linking from the Linux CI runner, sourcing a macOS SDK from
+a community redistribution (headers + `.tbd` framework stubs extracted from Xcode; Apple provides no
+official redistributable SDK). (c) Same, but self-host an SDK mirror.
+
+**Decision:** (b), pinned to `phracker/MacOSX-SDKs`' `11.3` (Big Sur) release, checksum-verified in
+CI. **Why:** `rawler` (via `chrono` → `iana-time-zone`) links `CoreFoundation` for the system
+timezone on macOS; zig's bundled cross-linker has no macOS frameworks to satisfy that without a real
+SDK. `phracker/MacOSX-SDKs` is the de facto standard for exactly this in the Rust/zig cross-compile
+community — there is no more "official" alternative, since Apple's SDK licence does not permit a
+sanctioned redistributable. SDK vintage only bounds which _new_ macOS APIs are available at build
+time, not which macOS versions can run the result (macOS binaries are forward-compatible), so 11.3
+is more than sufficient for the one framework call in play. Confirmed with the owner before landing,
+since it is a new third-party dependency of the shared release pipeline (owner has an Apple
+Developer Program membership for the separate, later code-signing/notarization step —
+`docs/ROADMAP.md`).
+
 ## Open questions (not blocking v0.1 start)
 
 - Camera→pixel-pitch source: derive vs small bundled DB vs config override. (ALGORITHMS §MTF50.)
