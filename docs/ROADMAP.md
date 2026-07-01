@@ -28,8 +28,8 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   cross-compile matrix on every push and pull request to `main`, gated by an aggregator `ci` job.
   `.github/workflows/release.yml` cuts a tagged release (`verify` → `build` → owner-approval-gated
   `publish`), backed by `CHANGELOG.md`, `scripts/release-prep.sh`, and `docs/release-process.md`.
-  _Done when:_ both workflow files exist and `just ci` passes locally — met; GitHub Actions has not
-  yet run against this change (no check runs recorded on the pull request as of this commit).
+  _Done when:_ both workflow files exist and `just ci` runs green in GitHub Actions — met (all 10
+  checks, including the 4-target cross-compile matrix, passed on PR #2's head commit).
 - **Configure the `release` GitHub Environment** — required reviewers + tag deployment policy for
   `release.yml`'s `publish` job. Owner-confirmed as configured; not independently verified from this
   session (no `gh` CLI or environments-API access available here). See `docs/release-process.md` for
