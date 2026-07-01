@@ -13,15 +13,7 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Configure the `release` GitHub Environment** — required reviewers + tag deployment policy, the
-  one-time manual prerequisite the `release` workflow's `publish` job depends on. Steps are in
-  `docs/release-process.md`. Until this is done, do not push a `v*` tag: `release.yml` will either
-  fail at the gate or, worse, publish unprotected if GitHub auto-creates the environment
-  unconfigured on first reference.
-  - _Depends on:_ CI and release workflows.
-  - _Done when:_ both halves of the `gh api .../environments/release` verification command in
-    `docs/release-process.md` show the required reviewer and the `v*` tag deployment policy in
-    place.
+- _(none yet)_
 
 ## In Progress
 
@@ -36,10 +28,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   cross-compile matrix on every push and pull request to `main`, gated by an aggregator `ci` job.
   `.github/workflows/release.yml` cuts a tagged release (`verify` → `build` → owner-approval-gated
   `publish`), backed by `CHANGELOG.md`, `scripts/release-prep.sh`, and `docs/release-process.md`.
-  _Done when:_ both workflow files exist and `just ci` runs green in GitHub Actions on this change's
-  own pull request — met. The release pipeline's manual prerequisite (the `release` GitHub
-  Environment) is **not yet configured**; see the "Up Next" item above before ever pushing a `v*`
-  tag.
+  _Done when:_ both workflow files exist and `just ci` passes locally — met; GitHub Actions has not
+  yet run against this change (no check runs recorded on the pull request as of this commit).
+- **Configure the `release` GitHub Environment** — required reviewers + tag deployment policy for
+  `release.yml`'s `publish` job. Owner-confirmed as configured; not independently verified from this
+  session (no `gh` CLI or environments-API access available here). See `docs/release-process.md` for
+  the verification commands to re-run before the first real tag.
 
 ## Deferred / known gaps
 

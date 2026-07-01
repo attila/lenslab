@@ -67,9 +67,10 @@ One-time setup, performed by the repository owner:
    the reviewers list collapses the security boundary — do not change without an explicit security
    review.
 
-   **This environment does not exist yet.** Until it is configured, `release.yml` will either fail
-   at the gate or (worse, if GitHub auto-creates an unprotected environment on first reference)
-   publish without approval. Configure it before ever pushing a `v*` tag.
+   **Owner-confirmed as configured.** Re-run the verification commands above before the first real
+   tag to confirm both halves are still in place — an unconfigured or partially-configured
+   environment either fails `release.yml` at the gate or, worse, publishes without approval if
+   GitHub auto-creates it unprotected on first reference.
 2. **Local tooling**: `just`, `dprint`, `git-cliff`, and the GitHub CLI (`gh`) authenticated against
    the repo (`gh auth login`).
 3. **Clean working tree** before starting any release procedure.
