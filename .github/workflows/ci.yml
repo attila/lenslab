@@ -109,6 +109,24 @@ jobs:
       - uses: taiki-e/install-action@6ef672efc2b5aabc787a9e94baf4989aa02a97df # v2.70.3
         with:
           tool: cargo-zigbuild@0.20.0
+      # zig's bundled cross-linker has no macOS system frameworks, so it cannot link anything
+      # that needs one — e.g. `rawler` (via `chrono` -> `iana-time-zone`) links CoreFoundation to
+      # read the system timezone on macOS. Point it at a real SDK's headers/framework stubs.
+      # phracker/MacOSX-SDKs is the community-standard redistribution for exactly this (headers +
+      # .tbd stub libraries extracted from Xcode, no Apple binaries); it is a third-party mirror,
+      # not an Apple-official distribution — see cargo-zigbuild's own docs on the underlying zig
+      # issue and the `SDKROOT` workaround. SDK vintage only bounds which *new* macOS APIs are
+      # available at build time, not which macOS versions can run the result — macOS binaries are
+      # forward-compatible, so 11.3 (Big Sur) is more than sufficient for the CoreFoundation calls
+      # in play here.
+      - name: Fetch macOS SDK for cross-linking
+        if: contains(matrix.target, 'apple-darwin')
+        run: |
+          curl -sSL -o sdk.tar.xz \
+            https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
+          mkdir -p sdk
+          tar -xf sdk.tar.xz -C sdk
+          echo "SDKROOT=$(find "$PWD/sdk" -maxdepth 1 -type d -name 'MacOSX*.sdk')" >> "$GITHUB_ENV"
       - run: cargo zigbuild --release --target ${{ matrix.target }}
 
   ci:
