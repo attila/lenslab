@@ -18,6 +18,14 @@ workspace = true
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+image.workspace = true
 lenslab-core = { path = "../lenslab-core" }
 lenslab-decode = { path = "../lenslab-decode" }
 serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tiff.workspace = true
+
+[features]
+real-fixtures = []

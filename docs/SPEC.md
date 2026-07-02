@@ -97,7 +97,7 @@ lenslab analyse <paths…>
 lenslab decentre <paths…>             # focused copy verdict; exit non-zero if decentred
 lenslab vignette <paths…>
 lenslab mtf <edge-shot> --roi X,Y,W,H # single slanted-edge MTF50 readout
-lenslab contact  <paths…> [--out f]   # contact sheet PNG
+lenslab contact  <paths…> --out <file> # contact sheet PNG
 lenslab inspect  <file>               # EXIF + decode info + corrections-present (no measurement)
 ```
 
