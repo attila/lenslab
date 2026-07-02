@@ -105,3 +105,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   command-wide taxonomy first (usage/config error, unsupported input, decode failure, render/output
   failure, internal bug), then implement typed error mapping across existing commands instead of
   changing `contact` alone.
+- **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
+  deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
+  `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
+  These are not failing checks today, but they are release-engineering drift: review and update the
+  pinned action SHAs/comments, confirm the replacements' runtime declarations, and decide whether to
+  keep installing dprint through `taiki-e/install-action` or switch to a quieter pinned install
+  path. _Done when:_ CI and release workflow runs complete without these maintenance annotations
+  while preserving pinned third-party actions, read-only CI permissions, and the existing release
+  approval boundary.
