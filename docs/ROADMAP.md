@@ -13,33 +13,14 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Real DNG fixture + `RawlerDecoder` validation** — owner to supply a real camera DNG (plus
-  ground-truth camera/lens/exposure values, verified independently with `exiftool`, not just
-  trusted) so `RawlerDecoder` gets exercised end-to-end for the first time; currently it is only
-  built against `rawler`'s documented API with no real file to decode. Storage is specced and built:
-  `docs/DECISIONS.md` D10 (GitHub Release asset, checksum-fetched), `scripts/fetch-dng-fixtures.sh`
-  / `just fixtures` with SHA256-pinned entries — still blocked on the files landing on the
-  `fixtures-dng-v1` release. Fixture ground truth is captured at
-  `tests/fixtures/dng/xtrans_xt3.exiftool.txt` and `tests/fixtures/dng/bayer_k1.exiftool.txt`. The
-  Fujifilm X-T3 RAF converted to DNG via Lightroom Classic covers more than expected — the 6×6
-  X-Trans `CFARepeatPatternDim` confirms a second CFA layout, and Lightroom attached `OpcodeList2`
-  (`FixVignetteRadial`) + `OpcodeList3` (`WarpRectilinear`) for the recognised lens profile, so it
-  exercises the corrections-present positive case. The Pentax K-1 native DNG covers the plain Bayer
-  case without opcode lists.
-  - _Depends on:_ Decode backend + `lenslab inspect`; owner supplies the file and its expected
-    values.
-  - _Done when:_ `lenslab inspect` against the real DNG is asserted against known-correct
-    camera/lens/dimensions/black-and-white-level/CFA-pattern values in a test, and — if the sample
-    carries baked-in DNG opcode lists — the corrections-present detection is exercised against a
-    real positive case too (currently only tested against their absence).
-- **Image model + zone geometry** — `lenslab-core::image` (`LinearImage`/`CfaImage`, planes,
-  metadata), single-green-plane extraction, and zone geometry (`docs/ALGORITHMS.md` §Channel,
-  §Zones). First step that needs real pixel data rather than just decode metadata — a real DNG to
-  decode and check the extraction against de-risks this before it's picked up.
-  - _Depends on:_ Decode backend + `lenslab inspect`. Benefits from, but does not strictly require,
-    the real DNG fixture above landing first.
-  - _Done when:_ a decoded frame can be split into the default 5-point zone layout with patch
-    sizing, covered by a unit test.
+- **Contact sheet output** — add the first visual artefact path: decode frames, extract a display
+  plane, and write a labelled contact sheet without changing `inspect` or starting metric work. This
+  should validate demosaic/display preparation and output I/O before acutance/decentring measurement
+  code.
+  - _Depends on:_ Image model + zone geometry; decode pixel path.
+  - _Done when:_ `lenslab contact <paths…> --out <file>` writes a deterministic image artefact from
+    synthetic TIFF input and a real-fixture smoke path, with tests covering output creation and the
+    CLI keeping machine-readable data off stdout unless a command explicitly owns it.
 
 ## In Progress
 
@@ -68,10 +49,25 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   measurement, the smallest end-to-end slice through decode (`docs/GENESIS.md` "Start here", step
   1). `TiffDecoder` is covered by an integration test against a synthetic TIFF fixture written with
   the `tiff` crate's own encoder (including a regression test for multi-channel `BitsPerSample`,
-  caught by manually running the built binary before committing). `RawlerDecoder` has no equivalent
-  fixture yet — no camera raw exists in this repository, and `rawler`'s own crates.io package ships
-  only digest/metadata files for its test corpus, not the raw samples themselves; see "Real DNG
-  fixture" above, now the next item up.
+  caught by manually running the built binary before committing).
+- **Real DNG fixture + `RawlerDecoder` validation** — checksum-pinned real-camera DNG fixtures are
+  hosted as GitHub Release assets under `fixtures-dng-v1`, fetched by
+  `scripts/fetch-dng-fixtures.sh` / `just fixtures`, and exercised by `just test-fixtures` plus CI's
+  fixture test job. The fixture ground truth is captured at
+  `tests/fixtures/dng/xtrans_xt3.exiftool.txt` and `tests/fixtures/dng/bayer_k1.exiftool.txt`. The
+  Fujifilm X-T3 DNG covers a 6x6 X-Trans CFA plus positive DNG opcode-list corrections; the Pentax
+  K-1 native DNG covers a plain Bayer case without opcode lists. _Done when:_ `lenslab inspect`
+  against real DNGs is asserted against known-correct camera, dimensions, black/white level, CFA
+  pattern, exposure, and corrections-present values — met by PR #4 (`fc6352c`).
+- **Image model + zone geometry** — `lenslab-core::image` now owns validated `LinearImage`,
+  `CfaImage`, RGB/luma input buffers, provenance, CFA pattern metadata, and borrowed patch views.
+  Core extracts a single native Bayer green phase without demosaic interpolation or G1/G2 averaging,
+  computes Rec.709 luma for RGB/TIFF inputs, and projects the documented five-zone source-frame
+  layout into measurement-plane coordinates. `lenslab-decode::Decoder` now has a pixel-bearing
+  `decode` path that returns plain project image types while keeping `rawler` and `tiff` confined to
+  `lenslab-decode`; `inspect` remains metadata-only. _Done when:_ a decoded or synthetic frame can
+  be split into the default five-point zone layout with patch sizing, covered by tests — met by the
+  core composition tests for synthetic CFA and RGB frames.
 
 ## Deferred / known gaps
 
@@ -94,3 +90,7 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   Developer Program membership to wire in when this is picked up; revisit alongside
   `docs/release-process.md` before macOS binaries are meant for anyone other than the owner
   building/running them directly.
+- **X-Trans green extraction is still unsupported** — core preserves unsupported CFA pattern
+  metadata and returns a typed error instead of approximating a green plane. Add correct X-Trans
+  extraction later if it becomes small enough to fit the v0.1 path without violating the
+  measured-vs-inferred rule.
