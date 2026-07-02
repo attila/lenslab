@@ -73,7 +73,7 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   stays empty for the human artefact command, unsupported CFA display fails honestly, and the
   real-fixture gate covers both Bayer success and X-Trans failure. _Done when:_ synthetic TIFF and
   real-fixture tests cover deterministic PNG creation, labels, output safety, and stdout/stderr
-  separation — met on `feat/contact-sheet-output`.
+  separation — met by PR #7.
 
 ## Deferred / known gaps
 
