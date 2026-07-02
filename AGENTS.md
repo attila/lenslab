@@ -57,6 +57,9 @@ Other load-bearing constraints:
 
 - `just ci` runs the full gate: `fmt` (dprint check) · `clippy` (`-D warnings`) · `test` · `deny` ·
   `doc`. Run it before declaring work done.
+- `just test-fixtures` downloads the real-camera DNG fixtures from the pinned GitHub Release assets
+  and runs the `RawlerDecoder` fixture tests. Run it after decode, fixture, or CI changes; CI runs
+  it in the test job. Plain `cargo test`/`just test` stays offline and does not fetch fixtures.
 - Formatting is dprint; the Rust toolchain is pinned by `rust-toolchain.toml`.
 - A pre-commit hook runs `dprint check`. Activate it once with `just setup` (cloud sessions wire it
   automatically via the SessionStart hook in `.claude/settings.json`).

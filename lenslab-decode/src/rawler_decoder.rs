@@ -122,6 +122,14 @@ fn dng_corrections(decoder: &dyn RawlerTrait) -> Corrections {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "real-fixtures")]
+    use std::path::{Path, PathBuf};
+
+    #[cfg(feature = "real-fixtures")]
+    use crate::{Decoder, SourceKind};
+
+    #[cfg(feature = "real-fixtures")]
+    use super::RawlerDecoder;
     use super::non_empty;
 
     #[test]
@@ -133,5 +141,81 @@ mod tests {
     fn non_empty_treats_whitespace_only_as_absent() {
         assert_eq!(non_empty("   "), None);
         assert_eq!(non_empty(""), None);
+    }
+
+    #[cfg(feature = "real-fixtures")]
+    fn fixture_path(name: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures/dng")
+            .join(name)
+    }
+
+    #[cfg(feature = "real-fixtures")]
+    #[test]
+    fn inspects_xtrans_dng_fixture_with_opcode_corrections() {
+        let path = fixture_path("xtrans_xt3.dng");
+        assert!(path.exists(), "missing fixture: {}", path.display());
+
+        let info = RawlerDecoder.inspect(&path).expect("fixture should decode");
+
+        assert_eq!(info.source_kind, SourceKind::Cfa);
+        assert_eq!(info.camera_make.as_deref(), Some("Fujifilm"));
+        assert_eq!(info.camera_model.as_deref(), Some("X-T3"));
+        assert_eq!(info.lens_model, None);
+        assert_eq!(info.width, 6240);
+        assert_eq!(info.height, 4160);
+        assert_eq!(info.bits_per_sample, 16);
+        assert_eq!(
+            info.cfa_pattern.as_deref(),
+            Some("GGBGGRBRGRBGGGBGGRGGRGGBRBGBRGGGRGGB")
+        );
+        assert_eq!(info.black_level, Some(vec![1022.0; 36]));
+        assert_eq!(info.white_level, Some(vec![16383.0]));
+        assert_float_eq(info.exposure.focal_length_mm, Some(30.0));
+        assert_float_eq(info.exposure.f_number, Some(8.0));
+        assert_float_eq(info.exposure.exposure_time_s, Some(1.0 / 170.0));
+        assert_eq!(info.exposure.iso, Some(160));
+        assert_eq!(info.corrections.present, Some(true));
+        assert_eq!(
+            info.corrections.detail,
+            ["DNG OpcodeList2 present", "DNG OpcodeList3 present"]
+        );
+    }
+
+    #[cfg(feature = "real-fixtures")]
+    #[test]
+    fn inspects_bayer_dng_fixture_without_opcode_corrections() {
+        let path = fixture_path("bayer_k1.dng");
+        assert!(path.exists(), "missing fixture: {}", path.display());
+
+        let info = RawlerDecoder.inspect(&path).expect("fixture should decode");
+
+        assert_eq!(info.source_kind, SourceKind::Cfa);
+        assert_eq!(info.camera_make.as_deref(), Some("Pentax"));
+        assert_eq!(info.camera_model.as_deref(), Some("K-1"));
+        assert_eq!(info.lens_model, None);
+        assert_eq!(info.width, 7392);
+        assert_eq!(info.height, 4950);
+        assert_eq!(info.bits_per_sample, 14);
+        assert_eq!(info.cfa_pattern.as_deref(), Some("RGGB"));
+        assert_eq!(info.black_level, Some(vec![64.0; 4]));
+        assert_eq!(info.white_level, Some(vec![16316.0]));
+        assert_float_eq(info.exposure.focal_length_mm, Some(50.0));
+        assert_float_eq(info.exposure.f_number, Some(8.0));
+        assert_float_eq(info.exposure.exposure_time_s, Some(0.01));
+        assert_eq!(info.exposure.iso, Some(100));
+        assert_eq!(info.corrections.present, Some(false));
+        assert!(info.corrections.detail.is_empty());
+    }
+
+    #[cfg(feature = "real-fixtures")]
+    fn assert_float_eq(actual: Option<f32>, expected: Option<f32>) {
+        match (actual, expected) {
+            (Some(actual), Some(expected)) => assert!(
+                (actual - expected).abs() < 0.000_001,
+                "expected {expected}, got {actual}"
+            ),
+            _ => assert_eq!(actual, expected),
+        }
     }
 }

@@ -38,3 +38,9 @@ therefore carries LGPL-2.1 obligations, met by this repository being fully open.
 [Genesis / handover](docs/GENESIS.md) · [Roadmap](docs/ROADMAP.md) · [Spec](docs/SPEC.md) ·
 [Algorithms](docs/ALGORITHMS.md) · [Decisions](docs/DECISIONS.md) ·
 [Plugin & skill](docs/SKILL_PLUGIN.md)
+
+## Development
+
+Run `just ci` for the normal offline gate. Run `just test-fixtures` when touching decode, fixture,
+or CI code; it downloads the real-camera DNG fixtures from checksum-pinned GitHub Release assets and
+runs the `RawlerDecoder` fixture tests.

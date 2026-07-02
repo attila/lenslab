@@ -1,0 +1,327 @@
+[ExifTool]      ExifTool Version Number         : 13.55
+[ExifTool]      Warning                         : [Minor] Not decoding some large array(s). Ignore minor errors to decode [x3]
+[System]        File Name                       : DSCF4005.DNG
+[System]        Directory                       : tmp
+[System]        File Size                       : 37 MB
+[System]        File Modification Date/Time     : 2026:07:02 16:11:25+01:00
+[System]        File Access Date/Time           : 2026:07:02 16:38:31+01:00
+[System]        File Inode Change Date/Time     : 2026:07:02 16:41:31+01:00
+[System]        File Permissions                : -rw-r--r--
+[File]          File Type                       : DNG
+[File]          File Type Extension             : dng
+[File]          MIME Type                       : image/x-adobe-dng
+[File]          Exif Byte Order                 : Little-endian (Intel, II)
+[IFD0]          Subfile Type                    : Reduced-resolution image
+[IFD0]          Image Width                     : 256
+[IFD0]          Image Height                    : 171
+[IFD0]          Bits Per Sample                 : 8 8 8
+[IFD0]          Compression                     : Uncompressed
+[IFD0]          Photometric Interpretation      : RGB
+[IFD0]          Make                            : FUJIFILM
+[IFD0]          Camera Model Name               : X-T3
+[IFD0]          Strip Offsets                   : 36776536
+[IFD0]          Orientation                     : Horizontal (normal)
+[IFD0]          Samples Per Pixel               : 3
+[IFD0]          Rows Per Strip                  : 171
+[IFD0]          Strip Byte Counts               : 131328
+[IFD0]          Planar Configuration            : Chunky
+[IFD0]          Software                        : Adobe Photoshop Lightroom Classic 15.4.1 (Macintosh)
+[IFD0]          Modify Date                     : 2026:07:02 16:11:25
+[IFD0]          DNG Version                     : 1.7.0.0
+[IFD0]          DNG Backward Version            : 1.1.0.0
+[IFD0]          Unique Camera Model             : Fujifilm X-T3
+[IFD0]          Color Matrix 1                  : 1.6064 -0.9942 0.112 -0.376 1.2096 0.1853 -0.0007 0.0545 0.6654
+[IFD0]          Color Matrix 2                  : 1.3426 -0.6334 -0.1177 -0.4244 1.2136 0.2371 -0.058 0.1303 0.598
+[IFD0]          Camera Calibration 1            : 0.9631 0 0 0 1 0 0 0 0.9734
+[IFD0]          Camera Calibration 2            : 0.9631 0 0 0 1 0 0 0 0.9734
+[IFD0]          Analog Balance                  : 1 1 1
+[IFD0]          As Shot Neutral                 : 0.529825 1 0.544144
+[IFD0]          Baseline Exposure               : 0.07
+[IFD0]          Baseline Noise                  : 1
+[IFD0]          Baseline Sharpness              : 1.9
+[IFD0]          Linear Response Limit           : 1
+[IFD0]          Camera Serial Number            : 0XX00000
+[IFD0]          DNG Lens Info                   : 30mm f/2.8
+[IFD0]          Shadow Scale                    : 1
+[IFD0]          Calibration Illuminant 1        : Standard Light A
+[IFD0]          Calibration Illuminant 2        : D65
+[IFD0]          Raw Data Unique ID              : 50C4824AEA3675FA6FB05F2072FB60FE
+[IFD0]          Original Raw File Name          : DSCF4005.RAF
+[IFD0]          Camera Calibration Sig          : com.adobe
+[IFD0]          Profile Calibration Sig         : com.adobe
+[IFD0]          Profile Name                    : Adobe Standard v2
+[IFD0]          Profile Hue Sat Map Dims        : 90 30 1
+[IFD0]          Profile Hue Sat Map Data 1      : (large array of 8100 float values)
+[IFD0]          Profile Hue Sat Map Data 2      : (large array of 8100 float values)
+[IFD0]          Profile Embed Policy            : Allow Copying
+[IFD0]          Profile Copyright               : Copyright 2018 Adobe Systems, Inc.
+[IFD0]          Forward Matrix 1                : 0.429 0.4478 0.0876 0.1744 0.8043 0.0213 0.0487 0.0006 0.7757
+[IFD0]          Forward Matrix 2                : 0.397 0.418 0.1493 0.219 0.7369 0.0441 0.1021 0.0017 0.7213
+[IFD0]          Preview Application Name        : Adobe Photoshop Lightroom Classic
+[IFD0]          Preview Application Version     : 15.4.1
+[IFD0]          Preview Settings Digest         : d6e39d95f2aedd047a82ff203fa698b5
+[IFD0]          Preview Color Space             : sRGB
+[IFD0]          Preview Date Time               : 2026:07:02 16:11:25+01:00
+[IFD0]          Profile Look Table Dims         : 36 8 16
+[IFD0]          Profile Look Table Data         : (large array of 13824 float values)
+[IFD0]          Noise Profile                   : 2.89509422446021e-05 1.15929915348518e-08 2.73090714885176e-05 1.10504795791136e-08 2.68329900053407e-05 9.89327596537165e-09
+[IFD0]          New Raw Image Digest            : c406b85935ef6919393ce2cdffd358ce
+[IFD0]          Thumbnail TIFF                  : (Binary data 131544 bytes, use -b option to extract)
+[SubIFD]        Subfile Type                    : Full-resolution image
+[SubIFD]        Image Width                     : 6240
+[SubIFD]        Image Height                    : 4160
+[SubIFD]        Bits Per Sample                 : 16
+[SubIFD]        Compression                     : JPEG
+[SubIFD]        Photometric Interpretation      : Color Filter Array
+[SubIFD]        Samples Per Pixel               : 1
+[SubIFD]        Planar Configuration            : Chunky
+[SubIFD]        Tile Width                      : 256
+[SubIFD]        Tile Length                     : 256
+[SubIFD]        Tile Offsets                    : (Binary data 3702 bytes, use -b option to extract)
+[SubIFD]        Tile Byte Counts                : (Binary data 2549 bytes, use -b option to extract)
+[SubIFD]        CFA Repeat Pattern Dim          : 6 6
+[SubIFD]        CFA Pattern 2                   : 1 1 2 1 1 0 2 0 1 0 2 1 1 1 2 1 1 0 1 1 0 1 1 2 0 2 1 2 0 1 1 1 0 1 1 2
+[SubIFD]        CFA Plane Color                 : Red,Green,Blue
+[SubIFD]        CFA Layout                      : Rectangular
+[SubIFD]        Black Level Repeat Dim          : 6 6
+[SubIFD]        Black Level                     : 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022 1022
+[SubIFD]        White Level                     : 16383
+[SubIFD]        Default Scale                   : 1 1
+[SubIFD]        Default Crop Origin             : 0 0
+[SubIFD]        Default Crop Size               : 6240 4160
+[SubIFD]        Anti Alias Strength             : 1
+[SubIFD]        Best Quality Scale              : 1
+[SubIFD]        Active Area                     : 0 0 4160 6240
+[SubIFD]        Opcode List 2                   : FixVignetteRadial
+[SubIFD]        Opcode List 3                   : WarpRectilinear
+[SubIFD]        Noise Profile                   : 2.89509422446021e-05 1.15929915348518e-08 2.73090714885176e-05 1.10504795791136e-08 2.68329900053407e-05 9.89327596537165e-09
+[SubIFD1]       Subfile Type                    : Reduced-resolution image
+[SubIFD1]       Image Width                     : 1040
+[SubIFD1]       Image Height                    : 693
+[SubIFD1]       Bits Per Sample                 : 16 16 16
+[SubIFD1]       Compression                     : JPEG XL
+[SubIFD1]       Photometric Interpretation      : Linear Raw
+[SubIFD1]       Samples Per Pixel               : 3
+[SubIFD1]       Planar Configuration            : Chunky
+[SubIFD1]       Tile Width                      : 352
+[SubIFD1]       Tile Length                     : 352
+[SubIFD1]       Tile Offsets                    : (Binary data 53 bytes, use -b option to extract)
+[SubIFD1]       Tile Byte Counts                : (Binary data 35 bytes, use -b option to extract)
+[SubIFD1]       Black Level                     : 4206 6868 10357
+[SubIFD1]       Preview Application Name        : Adobe Photoshop Lightroom Classic
+[SubIFD1]       Preview Application Version     : 15.4.1
+[SubIFD1]       Opcode List 2                   : MapPolynomial, MapPolynomial, MapPolynomial
+[SubIFD1]       Cache Version                   : 0.1.0.0
+[SubIFD1]       JXL Distance                    : 1
+[SubIFD1]       JXL Effort                      : 7
+[SubIFD1]       JXL Decode Speed                : 4
+[SubIFD2]       Subfile Type                    : Reduced-resolution image
+[SubIFD2]       Image Width                     : 512
+[SubIFD2]       Image Height                    : 341
+[SubIFD2]       Bits Per Sample                 : 16 16 16
+[SubIFD2]       Compression                     : JPEG XL
+[SubIFD2]       Photometric Interpretation      : Linear Raw
+[SubIFD2]       Samples Per Pixel               : 3
+[SubIFD2]       Planar Configuration            : Chunky
+[SubIFD2]       Tile Width                      : 256
+[SubIFD2]       Tile Length                     : 341
+[SubIFD2]       Tile Offsets                    : 36712380 36738786
+[SubIFD2]       Tile Byte Counts                : 26406 25398
+[SubIFD2]       Black Level                     : 213 0 734
+[SubIFD2]       Preview Application Name        : Adobe Photoshop Lightroom Classic
+[SubIFD2]       Preview Application Version     : 15.4.1
+[SubIFD2]       Opcode List 2                   : MapPolynomial, MapPolynomial, MapPolynomial
+[SubIFD2]       Cache Version                   : 0.1.0.0
+[SubIFD2]       JXL Distance                    : 1
+[SubIFD2]       JXL Effort                      : 7
+[SubIFD2]       JXL Decode Speed                : 4
+[SubIFD3]       Subfile Type                    : Reduced-resolution image
+[SubIFD3]       Image Width                     : 256
+[SubIFD3]       Image Height                    : 171
+[SubIFD3]       Bits Per Sample                 : 16 16 16
+[SubIFD3]       Compression                     : JPEG XL
+[SubIFD3]       Photometric Interpretation      : Linear Raw
+[SubIFD3]       Samples Per Pixel               : 3
+[SubIFD3]       Planar Configuration            : Chunky
+[SubIFD3]       Tile Width                      : 256
+[SubIFD3]       Tile Length                     : 171
+[SubIFD3]       Tile Offsets                    : 36764184
+[SubIFD3]       Tile Byte Counts                : 12352
+[SubIFD3]       Black Level                     : 2185 1837 2401
+[SubIFD3]       Preview Application Name        : Adobe Photoshop Lightroom Classic
+[SubIFD3]       Preview Application Version     : 15.4.1
+[SubIFD3]       Opcode List 2                   : MapPolynomial, MapPolynomial, MapPolynomial
+[SubIFD3]       Cache Version                   : 0.1.0.0
+[SubIFD3]       JXL Distance                    : 1
+[SubIFD3]       JXL Effort                      : 7
+[SubIFD3]       JXL Decode Speed                : 4
+[XMP-x]         XMP Toolkit                     : Image::ExifTool 13.55
+[XMP-aux]       Fuji Rating Already Applied     : True
+[XMP-aux]       Lens                            : XF30mmF2.8 R LM WR Macro
+[XMP-aux]       Lens Info                       : 30mm f/2.8
+[XMP-aux]       Lens Serial Number              : 0XX00000
+[XMP-aux]       Serial Number                   : 0XX00000
+[XMP-crd]       Camera Profile                  : Camera PROVIA/Standard
+[XMP-crd]       Look Name                       : 
+[XMP-crs]       Already Applied                 : False
+[XMP-crs]       Has Crop                        : False
+[XMP-crs]       Has Settings                    : False
+[XMP-dc]        Format                          : image/dng
+[XMP-exifEX]    Lens Model                      : XF30mmF2.8 R LM WR Macro
+[XMP-photoshop] Date Created                    : 2026:07:02 16:01:37+01:00
+[XMP-xmp]       Create Date                     : 2026:07:02 16:01:37+01:00
+[XMP-xmp]       Creator Tool                    : Adobe Photoshop Lightroom Classic 15.4.1 (Macintosh)
+[XMP-xmp]       Metadata Date                   : 2026:07:02 16:11:25+01:00
+[XMP-xmp]       Modify Date                     : 2026:07:02 16:11:25+01:00
+[XMP-xmpDM]     Pick                            : 0
+[XMP-xmpMM]     Derived From Document ID        : 00000000000000000000000000000000
+[XMP-xmpMM]     Derived From Original Document ID: 00000000000000000000000000000000
+[XMP-xmpMM]     Document ID                     : xmp.did:00000000-0000-4000-8000-000000000000
+[XMP-xmpMM]     History Action                  : derived, saved
+[XMP-xmpMM]     History Parameters              : converted from image/x-fuji-raw to image/dng, saved to new location
+[XMP-xmpMM]     History Changed                 : /
+[XMP-xmpMM]     History Instance ID             : xmp.iid:00000000-0000-4000-8000-000000000000
+[XMP-xmpMM]     History Software Agent          : Adobe Photoshop Lightroom Classic 15.4.1 (Macintosh)
+[XMP-xmpMM]     History When                    : 2026:07:02 16:11:25+01:00
+[XMP-xmpMM]     Instance ID                     : xmp.iid:00000000-0000-4000-8000-000000000000
+[XMP-xmpMM]     Original Document ID            : 00000000000000000000000000000000
+[XMP-xmpMM]     Preserved File Name             : DSCF4005.RAF
+[ExifIFD]       Exposure Time                   : 1/170
+[ExifIFD]       F Number                        : 8.0
+[ExifIFD]       Exposure Program                : Aperture-priority AE
+[ExifIFD]       ISO                             : 160
+[ExifIFD]       Sensitivity Type                : Standard Output Sensitivity
+[ExifIFD]       Exif Version                    : 0231
+[ExifIFD]       Date/Time Original              : 2026:07:02 16:01:37
+[ExifIFD]       Create Date                     : 2026:07:02 16:01:37
+[ExifIFD]       Offset Time                     : +01:00
+[ExifIFD]       Offset Time Original            : +01:00
+[ExifIFD]       Offset Time Digitized           : +01:00
+[ExifIFD]       Shutter Speed Value             : 1/170
+[ExifIFD]       Aperture Value                  : 8.0
+[ExifIFD]       Brightness Value                : 7.89
+[ExifIFD]       Exposure Compensation           : 0
+[ExifIFD]       Max Aperture Value              : 2.8
+[ExifIFD]       Metering Mode                   : Multi-segment
+[ExifIFD]       Light Source                    : Unknown
+[ExifIFD]       Flash                           : No Flash
+[ExifIFD]       Focal Length                    : 30.0 mm
+[ExifIFD]       Color Space                     : sRGB
+[ExifIFD]       Focal Plane X Resolution        : 2655.343201
+[ExifIFD]       Focal Plane Y Resolution        : 2655.343201
+[ExifIFD]       Focal Plane Resolution Unit     : cm
+[ExifIFD]       Sensing Method                  : One-chip color area
+[ExifIFD]       File Source                     : Digital Camera
+[ExifIFD]       Scene Type                      : Directly photographed
+[ExifIFD]       Custom Rendered                 : Normal
+[ExifIFD]       Exposure Mode                   : Auto
+[ExifIFD]       White Balance                   : Auto
+[ExifIFD]       Focal Length In 35mm Format     : 45 mm
+[ExifIFD]       Scene Capture Type              : Standard
+[ExifIFD]       Sharpness                       : Normal
+[ExifIFD]       Subject Distance Range          : Unknown
+[ExifIFD]       Serial Number                   : 0XX00000
+[ExifIFD]       Lens Info                       : 30mm f/2.8
+[ExifIFD]       Lens Make                       : FUJIFILM
+[ExifIFD]       Lens Model                      : XF30mmF2.8 R LM WR Macro
+[ExifIFD]       Lens Serial Number              : 0XX00000
+[FujiFilm]      Version                         : 0130
+[FujiFilm]      Internal Serial Number          : FF0000000000     Y00000 0000:00:00 AB000000ABCD
+[FujiFilm]      Fuji Film 0x0020                : 21930
+[FujiFilm]      Quality                         : NORMAL
+[FujiFilm]      Sharpness                       : 0 (normal)
+[FujiFilm]      White Balance                   : Auto
+[FujiFilm]      Saturation                      : 0 (normal)
+[FujiFilm]      White Balance Fine Tune         : Red +0, Blue +0
+[FujiFilm]      Noise Reduction                 : 0 (normal)
+[FujiFilm]      Fuji Flash Mode                 : Manual
+[FujiFilm]      Flash Exposure Comp             : 0
+[FujiFilm]      Focus Mode                      : Auto
+[FujiFilm]      AF Mode                         : Single Point
+[FujiFilm]      Focus Pixel                     : 2826 1163
+[FujiFilm]      Fuji Film 0x1025                : 4294901640
+[FujiFilm]      Fuji Film 0x1026                : 48
+[FujiFilm]      AF-S Priority                   : Release
+[FujiFilm]      AF-C Priority                   : Release
+[FujiFilm]      Fuji Film 0x102c                : 131073
+[FujiFilm]      Focus Mode 2                    : AF-S
+[FujiFilm]      Pre AF                          : Off
+[FujiFilm]      AF Area Mode                    : Single Point
+[FujiFilm]      AF Area Point Size              : 3
+[FujiFilm]      AF Area Zone Size               : n/a
+[FujiFilm]      AF-C Setting                    : Set 1 (multi-purpose)
+[FujiFilm]      AF-C Tracking Sensitivity       : 2
+[FujiFilm]      AF-C Speed Tracking Sensitivity : 0
+[FujiFilm]      AF-C Zone Area Switching        : Auto
+[FujiFilm]      Slow Sync                       : Off
+[FujiFilm]      Picture Mode                    : Aperture-priority AE
+[FujiFilm]      Exposure Count                  : 1
+[FujiFilm]      Shadow Tone                     : 0 (normal)
+[FujiFilm]      Highlight Tone                  : 0 (normal)
+[FujiFilm]      Lens Modulation Optimizer       : On
+[FujiFilm]      Fuji Film 0x1046                : 1
+[FujiFilm]      Grain Effect Roughness          : Off
+[FujiFilm]      Color Chrome Effect             : Off
+[FujiFilm]      Crop Mode                       : n/a
+[FujiFilm]      Shutter Type                    : Mechanical
+[FujiFilm]      Auto Bracketing                 : Off
+[FujiFilm]      Sequence Number                 : 0
+[FujiFilm]      Drive Mode                      : Single
+[FujiFilm]      Drive Speed                     : n/a
+[FujiFilm]      Fuji Film 0x1200                : 0
+[FujiFilm]      Blur Warning                    : None
+[FujiFilm]      Focus Warning                   : Good
+[FujiFilm]      Exposure Warning                : Good
+[FujiFilm]      Fuji Film 0x1303                : 0
+[FujiFilm]      Fuji Film 0x1304                : 0
+[FujiFilm]      Fuji Film 0x1305                : 0
+[FujiFilm]      Dynamic Range                   : Standard
+[FujiFilm]      Film Mode                       : F0/Standard (Provia)
+[FujiFilm]      Dynamic Range Setting           : Manual
+[FujiFilm]      Development Dynamic Range       : 100
+[FujiFilm]      Min Focal Length                : 30
+[FujiFilm]      Max Focal Length                : 30
+[FujiFilm]      Max Aperture At Min Focal       : 2.8
+[FujiFilm]      Max Aperture At Max Focal       : 2.8
+[FujiFilm]      Fuji Film 0x1408                : 0300
+[FujiFilm]      Fuji Film 0x1409                : 0100
+[FujiFilm]      Fuji Film 0x140a                : 23
+[FujiFilm]      Image Stabilization             : None; Off; 0
+[FujiFilm]      Fuji Film 0x1424                : 4096
+[FujiFilm]      Fuji Film 0x1430                : [...]
+[FujiFilm]      Image Generation                : Original Image
+[FujiFilm]      Image Count                     : 2164
+[FujiFilm]      Fuji Film 0x1439                : 
+[FujiFilm]      Fuji Film 0x1442                : 0
+[FujiFilm]      Flicker Reduction               : Off (0x0000)
+[FujiFilm]      Fuji Model                      : X-T3_0100
+[FujiFilm]      Fuji Model 2                    : X-T3_0100
+[FujiFilm]      Faces Detected                  : 0
+[FujiFilm]      Num Face Elements               : 0
+[RAF]           Raw Image Full Size             : 6384x4182
+[RAF]           Raw Image Crop Top Left         : 13 6
+[RAF]           Raw Image Cropped Size          : 6240x4160
+[RAF]           Fuji Film RAF 0x0112            : 408948800
+[RAF]           Fuji Film RAF 0x0113            : 272636000
+[RAF]           Raw Image Aspect Ratio          : 3:2
+[RAF]           Fuji Layout                     : 12 12 12 12
+[RAF]           X-Trans Layout                  : GRBGBR BGGRGG RGGBGG GBRGRB RGGBGG BGGRGG
+[RAF]           Fuji Film RAF 0x0141            : 917546
+[RAF]           Raw Exposure Bias               : -0.7
+[RAF]           Raw Image Width                 : 6276
+[RAF]           Raw Image Height                : 4140
+[Composite]     Aperture                        : 8.0
+[Composite]     CFA Pattern                     : [Green,Green,Blue,Green,Green,Red][Blue,Red,Green,Red,Blue,Green][Green,Green,Blue,Green,Green,Red][Green,Green,Red,Green,Green,Blue][Red,Blue,Green,Blue,Red,Green][Green,Green,Red,Green,Green,Blue]
+[Composite]     Image Size                      : 6240x4160
+[Composite]     Megapixels                      : 26.0
+[Composite]     Shutter Speed                   : 1/170
+[Composite]     Create Date                     : 2026:07:02 16:01:37+01:00
+[Composite]     Date/Time Original              : 2026:07:02 16:01:37+01:00
+[Composite]     Modify Date                     : 2026:07:02 16:11:25+01:00
+[Composite]     Light Value                     : 12.7
+[Composite]     Scale Factor To 35 mm Equivalent: 1.5
+[Composite]     Circle Of Confusion             : 0.020 mm
+[Composite]     Field Of View                   : 43.6 deg
+[Composite]     Focal Length 35mm Equiv         : 30.0 mm (35 mm equivalent: 45.0 mm)
+[Composite]     Hyperfocal Distance             : 5.62 m
+[Composite]     Lens ID                         : XF30mm F2.8 R LM WR Macro

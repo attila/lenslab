@@ -1,0 +1,350 @@
+[ExifTool]      ExifTool Version Number         : 13.55
+[System]        File Name                       : IMGP1628.DNG
+[System]        Directory                       : tmp
+[System]        File Size                       : 65 MB
+[System]        File Modification Date/Time     : 2026:07:02 16:04:41+01:00
+[System]        File Access Date/Time           : 2026:07:02 16:38:31+01:00
+[System]        File Inode Change Date/Time     : 2026:07:02 16:37:18+01:00
+[System]        File Permissions                : -rw-r--r--
+[File]          File Type                       : DNG
+[File]          File Type Extension             : dng
+[File]          MIME Type                       : image/x-adobe-dng
+[File]          Exif Byte Order                 : Little-endian (Intel, II)
+[IFD0]          Subfile Type                    : Reduced-resolution image
+[IFD0]          Image Width                     : 160
+[IFD0]          Image Height                    : 120
+[IFD0]          Bits Per Sample                 : 8 8 8
+[IFD0]          Compression                     : Uncompressed
+[IFD0]          Photometric Interpretation      : RGB
+[IFD0]          Make                            : RICOH IMAGING COMPANY, LTD.
+[IFD0]          Camera Model Name               : PENTAX K-1
+[IFD0]          Strip Offsets                   : 64492684
+[IFD0]          Orientation                     : Horizontal (normal)
+[IFD0]          Samples Per Pixel               : 3
+[IFD0]          Rows Per Strip                  : 120
+[IFD0]          Strip Byte Counts               : 57600
+[IFD0]          X Resolution                    : 300
+[IFD0]          Y Resolution                    : 300
+[IFD0]          Planar Configuration            : Chunky
+[IFD0]          Resolution Unit                 : inches
+[IFD0]          Software                        : PENTAX K-1 Ver. 2.50
+[IFD0]          Modify Date                     : 2026:07:02 16:04:33
+[IFD0]          Artist                          : 
+[IFD0]          Copyright                       : 
+[IFD0]          DNG Version                     : 1.2.0.0
+[IFD0]          DNG Backward Version            : 1.2.0.0
+[IFD0]          Unique Camera Model             : PENTAX K-1
+[IFD0]          Color Matrix 1                  : 1.095123291 -0.5653381348 -0.1178436279 -0.3411560059 1.01663208 0.3785552979 -0.01821899414 0.04200744629 0.7479858398
+[IFD0]          Color Matrix 2                  : 0.8784179688 -0.281539917 -0.1232147217 -0.3611755371 1.220397949 0.1549835205 -0.09190368652 0.1728820801 0.6444854736
+[IFD0]          Analog Balance                  : 1 1 1
+[IFD0]          As Shot Neutral                 : 0.4876190476 1 0.6139088729
+[IFD0]          Baseline Exposure               : -0.5060577393
+[IFD0]          Baseline Noise                  : 1
+[IFD0]          Baseline Sharpness              : 1
+[IFD0]          Linear Response Limit           : 1
+[IFD0]          Calibration Illuminant 1        : Standard Light A
+[IFD0]          Calibration Illuminant 2        : D65
+[IFD0]          Preview Color Space             : sRGB
+[IFD0]          Thumbnail TIFF                  : (Binary data 57816 bytes, use -b option to extract)
+[SubIFD]        Subfile Type                    : Full-resolution image
+[SubIFD]        Image Width                     : 7392
+[SubIFD]        Image Height                    : 4950
+[SubIFD]        Bits Per Sample                 : 14
+[SubIFD]        Compression                     : JPEG
+[SubIFD]        Photometric Interpretation      : Color Filter Array
+[SubIFD]        Strip Offsets                   : 130048
+[SubIFD]        Samples Per Pixel               : 1
+[SubIFD]        Rows Per Strip                  : 4950
+[SubIFD]        Strip Byte Counts               : 59301386
+[SubIFD]        X Resolution                    : 300
+[SubIFD]        Y Resolution                    : 300
+[SubIFD]        Planar Configuration            : Chunky
+[SubIFD]        Resolution Unit                 : inches
+[SubIFD]        CFA Repeat Pattern Dim          : 2 2
+[SubIFD]        CFA Pattern 2                   : 0 1 1 2
+[SubIFD]        CFA Layout                      : Rectangular
+[SubIFD]        Black Level Repeat Dim          : 2 2
+[SubIFD]        Black Level                     : 64 64 64 64
+[SubIFD]        White Level                     : 16316
+[SubIFD]        Default Scale                   : 1 1
+[SubIFD]        Default Crop Origin             : 8 10
+[SubIFD]        Default Crop Size               : 7360 4912
+[SubIFD]        Bayer Green Split               : 0
+[SubIFD]        Anti Alias Strength             : 1
+[SubIFD]        Active Area                     : 18 6 4950 7382
+[SubIFD1]       Subfile Type                    : Reduced-resolution image
+[SubIFD1]       Image Width                     : 7360
+[SubIFD1]       Image Height                    : 4912
+[SubIFD1]       Bits Per Sample                 : 8 8 8
+[SubIFD1]       Compression                     : JPEG
+[SubIFD1]       Photometric Interpretation      : YCbCr
+[SubIFD1]       Preview Image Start             : 59431434
+[SubIFD1]       Samples Per Pixel               : 3
+[SubIFD1]       Rows Per Strip                  : 4912
+[SubIFD1]       Preview Image Length            : 5061249
+[SubIFD1]       X Resolution                    : 300
+[SubIFD1]       Y Resolution                    : 300
+[SubIFD1]       Planar Configuration            : Chunky
+[SubIFD1]       Resolution Unit                 : inches
+[SubIFD1]       White Point                     : 0.313 0.329
+[SubIFD1]       Primary Chromaticities          : 0.64 0.33 0.3 0.6 0.15 0.06
+[SubIFD1]       Y Cb Cr Coefficients            : 0.299 0.587 0.114
+[SubIFD1]       Y Cb Cr Sub Sampling            : YCbCr4:2:2 (2 1)
+[SubIFD1]       Y Cb Cr Positioning             : Co-sited
+[SubIFD1]       Preview Color Space             : sRGB
+[SubIFD1]       Preview Image                   : (Binary data 5061249 bytes, use -b option to extract)
+[ExifIFD]       Exposure Time                   : 1/100
+[ExifIFD]       F Number                        : 8.0
+[ExifIFD]       Exposure Program                : Aperture-priority AE
+[ExifIFD]       ISO                             : 100
+[ExifIFD]       Sensitivity Type                : Standard Output Sensitivity
+[ExifIFD]       Standard Output Sensitivity     : 100
+[ExifIFD]       Date/Time Original              : 2026:07:02 16:04:33
+[ExifIFD]       Create Date                     : 2026:07:02 16:04:33
+[ExifIFD]       Exposure Compensation           : 0
+[ExifIFD]       Metering Mode                   : Multi-segment
+[ExifIFD]       Flash                           : Off, Did not fire
+[ExifIFD]       Focal Length                    : 50.0 mm
+[ExifIFD]       Sensing Method                  : One-chip color area
+[ExifIFD]       Custom Rendered                 : Normal
+[ExifIFD]       Exposure Mode                   : Auto
+[ExifIFD]       White Balance                   : Auto
+[ExifIFD]       Focal Length In 35mm Format     : 50 mm
+[ExifIFD]       Scene Capture Type              : Standard
+[ExifIFD]       Contrast                        : High
+[ExifIFD]       Saturation                      : Normal
+[ExifIFD]       Sharpness                       : Hard
+[ExifIFD]       Subject Distance Range          : Close
+[ExifIFD]       Serial Number                   : 0000000
+[GPS]           GPS Version ID                  : 2.3.0.0
+[Pentax]        Pentax Version                  : 15.2.0.0
+[Pentax]        Pentax Model Type               : 0
+[Pentax]        Preview Image Size              : 720x480
+[Pentax]        Preview Image Length            : 50954
+[Pentax]        Preview Image Start             : 77952
+[Pentax]        Pentax Model ID                 : K-1
+[Pentax]        Date                            : 2026:07:02
+[Pentax]        Time                            : 16:04:33
+[Pentax]        Quality                         : RAW
+[Pentax]        Flash Mode                      : Off, Did not fire; Internal
+[Pentax]        Focus Mode                      : Contrast-detect (Release-priority)
+[Pentax]        AF Point Selected               : Face Detect AF; Single Point
+[Pentax]        Exposure Time                   : 1/100
+[Pentax]        F Number                        : 8.0
+[Pentax]        ISO                             : 100
+[Pentax]        Exposure Compensation           : 0
+[Pentax]        Metering Mode                   : Multi-segment
+[Pentax]        Auto Bracketing                 : 0 EV, No Extended Bracket
+[Pentax]        White Balance                   : Auto
+[Pentax]        Focal Length                    : 50.0 mm
+[Pentax]        Saturation                      : 0 (normal)
+[Pentax]        Contrast                        : +1 (medium high)
+[Pentax]        Sharpness                       : +1 (medium hard)
+[Pentax]        DSP Firmware Version            : 2.50.20.42
+[Pentax]        Effective LV                    : 12.5
+[Pentax]        Picture Mode                    : Aperture Priority; 1/3 EV steps
+[Pentax]        Drive Mode                      : Single-frame; No Timer; Shutter Button; Single Exposure
+[Pentax]        Color Space                     : sRGB
+[Pentax]        Data Scaling                    : 8158
+[Pentax]        Preview Image Borders           : 0 0 0 0
+[Pentax]        Lens Type                       : HD PENTAX-D FA* 50mm F1.4 SDM AW
+[Pentax]        Extender Status                 : Not attached
+[Pentax]        Camera Temperature              : 25 C
+[Pentax]        AE Lock                         : Off
+[Pentax]        Noise Reduction                 : Off
+[Pentax]        Flash Exposure Comp             : 0; 0
+[Pentax]        Image Tone                      : Bright
+[Pentax]        SR Result                       : [0]
+[Pentax]        Shake Reduction                 : On (AA simulation off)
+[Pentax]        Shutter Count                   : 2426
+[Pentax]        Faces Detected                  : 0
+[Pentax]        Face Position                   : 0 0
+[Pentax]        Raw Development Process         : 16 (K-1)
+[Pentax]        Hue                             : Normal
+[Pentax]        White Balance Auto Adjustment   : Off
+[Pentax]        Tungsten AWB                    : Strong Correction
+[Pentax]        Dynamic Range Expansion         : Off; 0; 0; 0
+[Pentax]        World Time Location             : Hometown
+[Pentax]        Hometown DST                    : No
+[Pentax]        Destination DST                 : No
+[Pentax]        Hometown City                   : London
+[Pentax]        Destination City                : London
+[Pentax]        High/Low Key Adj                : 0
+[Pentax]        Contrast Highlight              : 0
+[Pentax]        Contrast Shadow                 : 0
+[Pentax]        Contrast Highlight/Shadow Adj   : Off
+[Pentax]        Fine Sharpness                  : Off; Normal
+[Pentax]        High ISO Noise Reduction        : Auto; Inactive
+[Pentax]        AF Adjustment                   : 0
+[Pentax]        Monochrome Filter Effect        : None
+[Pentax]        Monochrome Toning               : None
+[Pentax]        Face Detect                     : On (16 faces max); 0 faces detected; 0
+[Pentax]        Face Detect Frame Size          : 720 480
+[Pentax]        Pentax 0x0078                   : 0 0
+[Pentax]        Shadow Correction               : Auto
+[Pentax]        ISO Auto Min Speed              : Auto Slow; 0
+[Pentax]        Cross Process                   : Off
+[Pentax]        Distortion Correction           : Off
+[Pentax]        Chromatic Aberration Correction : On
+[Pentax]        Peripheral Illumination Corr    : Off
+[Pentax]        Diffraction Correction          : On
+[Pentax]        White Level                     : 16316
+[Pentax]        Bleach Bypass Toning            : n/a
+[Pentax]        Aspect Ratio                    : 3:2
+[Pentax]        Pentax 0x0083                   : 0
+[Pentax]        HDR                             : Off; Auto-align Off; n/a; 0
+[Pentax]        Pentax 0x0086                   : 0
+[Pentax]        Shutter Type                    : Normal
+[Pentax]        Interval Shooting               : Off
+[Pentax]        Skin Tone Correction            : Off
+[Pentax]        Clarity Control                 : Off
+[Pentax]        Pentax 0x0098                   : 1 1 0
+[Pentax]        Black Point                     : 64 64 64 64
+[Pentax]        White Point                     : 16800 8192 8192 13344
+[Pentax]        AE Exposure Time                : 1/85
+[Pentax]        AE Aperture                     : 8.0
+[Pentax]        AE ISO                          : 100
+[Pentax]        AE Max Aperture                 : 1.4
+[Pentax]        AE Max Aperture 2               : 1.4
+[Pentax]        AE Min Aperture                 : 16
+[Pentax]        AE Min Exposure Time            : 1/7723
+[Pentax]        Lens Type                       : HD PENTAX-D FA* 50mm F1.4 SDM AW
+[Pentax]        Auto Aperture                   : On
+[Pentax]        Min Aperture                    : 22
+[Pentax]        Lens F Stops                    : 8.5
+[Pentax]        Lens Kind                       : 0x18
+[Pentax]        LC1                             : 0x56
+[Pentax]        Min Focus Distance              : 0.40-0.45 m
+[Pentax]        Focus Range Index               : 1 (close)
+[Pentax]        LC3                             : 0x00
+[Pentax]        LC4                             : 0x83
+[Pentax]        LC5                             : 0x02
+[Pentax]        LC6                             : 0x11
+[Pentax]        LC7                             : 0x20
+[Pentax]        Lens Focal Length               : 50.0 mm
+[Pentax]        Nominal Max Aperture            : 1.4
+[Pentax]        Nominal Min Aperture            : 16
+[Pentax]        LC10                            : 0x68
+[Pentax]        LC11                            : 0x3c
+[Pentax]        LC12                            : 0x05
+[Pentax]        Max Aperture                    : 1.4
+[Pentax]        LC14                            : 0x84
+[Pentax]        LC15                            : 0xfb
+[Pentax]        AE Metering Segments            : 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[Pentax]        Flash Metering Segments         : 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[Pentax]        Slave Flash Metering Segments   : 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[Pentax]        Pentax Model ID                 : K-1
+[Pentax]        Manufacture Date                : 1970:01:01
+[Pentax]        Production Code                 : 2.1
+[Pentax]        Internal Serial Number          : 9999999
+[Pentax]        Power Source                    : Body Battery
+[Pentax]        Body Battery State              : Full
+[Pentax]        Body Battery Voltage 1          : 6.96 V
+[Pentax]        Body Battery Voltage 2          : 6.72 V
+[Pentax]        Pentax 0x021a                   : ...........€.....ÿÿÿÿÿÿ.[...]
+[Pentax]        Saturation Info                 : (Binary data 418 bytes, use -b option to extract)
+[Pentax]        Color Matrix A2                 : 5857 2334 0 0 8192 0 0 335 7856
+[Pentax]        Color Matrix B2                 : 13952 -4416 -1344 -1472 13792 -4128 128 -2816 10880
+[Pentax]        Pentax 0x021e                   : 
+[Pentax]        AF Points Unknown 1             : (none)
+[Pentax]        AF Points Unknown 2             : Auto
+[Pentax]        AF Predictor                    : 0
+[Pentax]        AF Defocus                      : 1
+[Pentax]        AF Integration Time             : 0 ms
+[Pentax]        Huffman Table                   : (Binary data 59 bytes, use -b option to extract)
+[Pentax]        Kelvin WB Daylight              : 5205 0 2.154296875 1.457763671875
+[Pentax]        Kelvin WB 01                    : 2500 0 1.15869140625 2.6595458984375
+[Pentax]        Kelvin WB 02                    : 2630 0 1.224365234375 2.5562744140625
+[Pentax]        Kelvin WB 03                    : 2780 0 1.306640625 2.4306640625
+[Pentax]        Kelvin WB 04                    : 2940 0 1.3916015625 2.3052978515625
+[Pentax]        Kelvin WB 05                    : 3130 0 1.484375 2.17333984375
+[Pentax]        Kelvin WB 06                    : 3330 0 1.5728759765625 2.05419921875
+[Pentax]        Kelvin WB 07                    : 3570 0 1.6689453125 1.9326171875
+[Pentax]        Kelvin WB 08                    : 3850 0 1.7706298828125 1.814453125
+[Pentax]        Kelvin WB 09                    : 4170 0 1.8760986328125 1.702880859375
+[Pentax]        Kelvin WB 10                    : 4550 0 1.98876953125 1.5955810546875
+[Pentax]        Kelvin WB 11                    : 5000 0 2.1065673828125 1.4949951171875
+[Pentax]        Kelvin WB 12                    : 5560 0 2.23291015625 1.4000244140625
+[Pentax]        Kelvin WB 13                    : 6250 0 2.3621826171875 1.3150634765625
+[Pentax]        Kelvin WB 14                    : 7140 0 2.4952392578125 1.23974609375
+[Pentax]        Kelvin WB 15                    : 8330 0 2.630859375 1.1728515625
+[Pentax]        Kelvin WB 16                    : 10000 0 2.7686767578125 1.1102294921875
+[Pentax]        WB Shift AB                     : 0
+[Pentax]        WB Shift GM                     : 0
+[Pentax]        EV Steps                        : 1/3 EV Steps
+[Pentax]        Sensitivity Steps               : 1 EV Steps
+[Pentax]        Live View                       : On
+[Pentax]        Pentax 0x0227                   : [...]
+[Pentax]        Pentax 0x0228                   : [...]
+[Pentax]        Serial Number                   : 0000000
+[Pentax]        Source Directory Index          : 0
+[Pentax]        Source File Index               : 0
+[Pentax]        Digital Filter 01               : Off
+[Pentax]        Digital Filter 02               : Off
+[Pentax]        Digital Filter 03               : Off
+[Pentax]        Digital Filter 04               : Off
+[Pentax]        Digital Filter 05               : Off
+[Pentax]        Digital Filter 06               : Off
+[Pentax]        Digital Filter 07               : Off
+[Pentax]        Digital Filter 08               : Off
+[Pentax]        Digital Filter 09               : Off
+[Pentax]        Digital Filter 10               : Off
+[Pentax]        Digital Filter 11               : Off
+[Pentax]        Digital Filter 12               : Off
+[Pentax]        Digital Filter 13               : Off
+[Pentax]        Digital Filter 14               : Off
+[Pentax]        Digital Filter 15               : Off
+[Pentax]        Digital Filter 16               : Off
+[Pentax]        Digital Filter 17               : Off
+[Pentax]        Digital Filter 18               : Off
+[Pentax]        Digital Filter 19               : Off
+[Pentax]        Digital Filter 20               : Off
+[Pentax]        Level Orientation               : Horizontal (normal)
+[Pentax]        Composition Adjust              : Off
+[Pentax]        Roll Angle                      : -0.5
+[Pentax]        Pitch Angle                     : -0.5
+[Pentax]        Composition Adjust X            : 102
+[Pentax]        Composition Adjust Y            : 1
+[Pentax]        Composition Adjust Rotation     : 1.5
+[Pentax]        Pentax 0x022c                   : .¢¼>.†°(.V¸(.Hºf.-¾=.}ÀN.¤Ä9.®º.ºÂR
+[Pentax]        Pentax 0x022d                   : .mE  f3. V  «&.îL  {,..+  ‰Z.×T  ¸1.ZH  N8[...]
+[Pentax]        Contrast Detect AF Area         : 160 132 400 216
+[Pentax]        Pentax 0x0234                   : [...]
+[Pentax]        Pentax 0x0236                   : .ˆTVT..#Ôÿ .æÿ. .0õÿàÿ.ç.|.œ.y.R.5.uĞ.»..ˆT[...]
+[Pentax]        Num CAF Points                  : 35
+[Pentax]        CAF Grid Size                   : 7x5
+[Pentax]        CAF Points In Focus             : 9,10,11,12,13,16,17,18,19,20,23,24,25,26,27
+[Pentax]        CAF Points Selected             : 9,10,11,12,13,16,17,18,19,20,23,24,25,26,27
+[Pentax]        Pentax 0x023b                   : .şö.§..şöÿÿ.”.Æ+J.øñ..øñ.
+[Pentax]        Pentax 0x023c                   : ø‰.i.Z.X  „.Ø..:Çä(.P.¶.t..@.ˆ.[...]
+[Pentax]        Pentax 0x023d                   : ..Ğ.D...À.0.¾
+[Pentax]        Pentax 0x023e                   : ..À.0.
+[Pentax]        Pentax 0x0240                   : .ğ,Cã.[...]
+[Pentax]        Pentax 0x0241                   : ²h²h+t‚»
+[Pentax]        Pentax 0x0242                   : ÿÿÿÿÿÿÿÿşÿÿÿÿÿÿÿÿÿÿÿÿÿûÿÿÿÿÿ÷ÿûÿÿßÿÿÿÿÿÿ÷ÿÿÿÿıÿÿÿÿÿÿÿÿÿ[...]
+[Pentax]        Pixel Shift Resolution          : Off
+[Pentax]        Pentax 0x0244                   : 
+[Pentax]        Num AF Points                   : 33
+[Pentax]        AF Points In Focus              : 
+[Pentax]        AF Points Selected              : 17
+[Pentax]        AF Points Special               : 
+[Pentax]        Pentax 0x024e                   : [...]
+[Pentax]        Pentax 0x024f                   : 
+[Pentax]        Pentax 0x0404                   : ...... ..·æ.!...Şûíıh.ûı²6ÆıøO­ı.a»ıHz€ı’“oıØ´uın[...]
+[Pentax]        Unknown Block                   : (Binary data 49160 bytes, use -b option to extract)
+[Pentax]        Pentax 0x0406                   : .... ..·æ.!...^{o}éz}0¶D}{Ï.}‚á8}Íú.}..ì}_4ö}æNÀ[...]
+[Pentax]        Pentax 0x0407                   : 143 145 152 153 154 155 156 152 162 165 153 149 145 144[...]
+[Pentax]        Pentax 0x0408                   : 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0[...]
+[Pentax]        Preview Image                   : (Binary data 50954 bytes, use -b option to extract)
+[Composite]     Aperture                        : 8.0
+[Composite]     CFA Pattern                     : [Red,Green][Green,Blue]
+[Composite]     Image Size                      : 7392x4950
+[Composite]     Lens ID                         : HD PENTAX-D FA* 50mm F1.4 SDM AW
+[Composite]     Megapixels                      : 36.6
+[Composite]     Scale Factor To 35 mm Equivalent: 1.0
+[Composite]     Shutter Speed                   : 1/100
+[Composite]     Circle Of Confusion             : 0.030 mm
+[Composite]     Field Of View                   : 39.6 deg
+[Composite]     Focal Length 35mm Equiv         : 50.0 mm (35 mm equivalent: 50.0 mm)
+[Composite]     Hyperfocal Distance             : 10.40 m
+[Composite]     Light Value                     : 12.6

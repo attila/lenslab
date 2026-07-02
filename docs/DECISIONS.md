@@ -94,6 +94,30 @@ since it is a new third-party dependency of the shared release pipeline (owner h
 Developer Program membership for the separate, later code-signing/notarization step —
 `docs/ROADMAP.md`).
 
+## D10 — Real-camera fixture storage: GitHub Release asset, checksum-fetched
+
+**Options:** (a) Commit the DNG(s) directly to the repository. (b) Git LFS. (c) External fetch —
+host as a GitHub Release asset in this repo, downloaded by a script and verified against a pinned
+SHA256, mirroring the macOS SDK fetch already in `.github/workflows/ci.yml`.
+
+**Decision:** (c). **Why:** Real camera raws run tens of MB (`docs/ROADMAP.md` "Real DNG fixture").
+(a) permanently bloats every clone — git never forgets a blob without a history rewrite — and every
+CI job that checks out the repo pays for it even when it doesn't touch the fixture (`fmt`/`clippy`/
+`deny`/`doc` all check out; only `test` would need it). GitHub also soft-warns above 50MB and
+hard-blocks above 100MB per file. (b) keeps history small but adds a new required tool (`git-lfs`)
+for every contributor and CI job, and leans on GitHub's account-wide LFS quota (10GB storage + 10GB
+bandwidth/month, free tier) for something that doesn't need a dedicated large-file service. (c)
+reuses a pattern already vetted in this repo rather than introducing one: `curl` + `sha256sum -c`,
+cached via `actions/cache` in CI. Release assets go up to 2GiB with no separate quota, need no
+credentials to fetch since the release is public, and keep repository history light regardless of
+how many fixtures accumulate later (the next roadmap item, zone geometry, also wants real pixel
+data). Rejected external hosts (S3, Dropbox, Bunny.net): each is a new account, credential, and
+billing relationship to maintain indefinitely for a handful of files already sitting next to code
+that lives on GitHub anyway — no durability or cost advantage over a Release asset in this same
+repository. **Note:** kept off the version-tagged releases `release.yml`/ `scripts/release-prep.sh`
+produce — those are owner-approval-gated shipped-binary releases; fixture assets live under a
+separate, non-version tag (`fixtures-dng-v1`) so the two never entangle.
+
 ## Open questions (not blocking v0.1 start)
 
 - Camera→pixel-pitch source: derive vs small bundled DB vs config override. (ALGORITHMS §MTF50.)

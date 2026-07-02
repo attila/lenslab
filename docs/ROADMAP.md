@@ -13,12 +13,19 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Real DNG fixture + `RawlerDecoder` validation** — owner to supply a real camera DNG (plus its
-  ground-truth camera/lens/exposure values, and — separately — a call on how a raw file gets into
-  the repo: committed directly, Git LFS, or an external fixture store, since camera raws run tens of
-  MB) so `RawlerDecoder` gets exercised end-to-end for the first time; currently it is only built
-  against `rawler`'s documented API with no real file to decode (`docs/ROADMAP.md`'s prior "No DNG
-  decode fixture" gap, now unblocked). To be specced in a follow-up session, not assumed here.
+- **Real DNG fixture + `RawlerDecoder` validation** — owner to supply a real camera DNG (plus
+  ground-truth camera/lens/exposure values, verified independently with `exiftool`, not just
+  trusted) so `RawlerDecoder` gets exercised end-to-end for the first time; currently it is only
+  built against `rawler`'s documented API with no real file to decode. Storage is specced and built:
+  `docs/DECISIONS.md` D10 (GitHub Release asset, checksum-fetched), `scripts/fetch-dng-fixtures.sh`
+  / `just fixtures` with SHA256-pinned entries — still blocked on the files landing on the
+  `fixtures-dng-v1` release. Fixture ground truth is captured at
+  `tests/fixtures/dng/xtrans_xt3.exiftool.txt` and `tests/fixtures/dng/bayer_k1.exiftool.txt`. The
+  Fujifilm X-T3 RAF converted to DNG via Lightroom Classic covers more than expected — the 6×6
+  X-Trans `CFARepeatPatternDim` confirms a second CFA layout, and Lightroom attached `OpcodeList2`
+  (`FixVignetteRadial`) + `OpcodeList3` (`WarpRectilinear`) for the recognised lens profile, so it
+  exercises the corrections-present positive case. The Pentax K-1 native DNG covers the plain Bayer
+  case without opcode lists.
   - _Depends on:_ Decode backend + `lenslab inspect`; owner supplies the file and its expected
     values.
   - _Done when:_ `lenslab inspect` against the real DNG is asserted against known-correct

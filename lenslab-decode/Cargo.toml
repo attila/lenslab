@@ -17,5 +17,8 @@ serde.workspace = true
 thiserror.workspace = true
 tiff.workspace = true
 
+[features]
+real-fixtures = []
+
 [dev-dependencies]
 tempfile.workspace = true
