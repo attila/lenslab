@@ -3,6 +3,8 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod contact;
+
 #[derive(Parser)]
 #[command(
     name = "lenslab",
@@ -16,6 +18,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Render a labelled PNG contact sheet from DNG/TIFF frames.
+    Contact {
+        /// DNG or TIFF frames to include, in contact-sheet order.
+        #[arg(required = true, num_args = 1..)]
+        paths: Vec<PathBuf>,
+
+        /// PNG output path.
+        #[arg(long, short)]
+        out: PathBuf,
+    },
+
     /// EXIF + decode info + corrections-present flag (no measurement).
     Inspect {
         /// DNG or TIFF frame to inspect.
@@ -35,6 +48,7 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
+        Command::Contact { paths, out } => contact::write_contact_sheet(&paths, &out),
         Command::Inspect { file } => inspect(&file),
     }
 }

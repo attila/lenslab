@@ -25,6 +25,7 @@ test:
 # Run real-camera DNG fixture tests
 test-fixtures: fixtures
     cargo test -p lenslab-decode --features real-fixtures
+    cargo test -p lenslab-cli --features real-fixtures
 
 # Run dependency audits
 #

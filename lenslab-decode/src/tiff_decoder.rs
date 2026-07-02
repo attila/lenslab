@@ -44,32 +44,7 @@ impl Decoder for TiffDecoder {
             .read_from_container(&mut reader)
             .map_err(|source| DecodeError::exif(path, source))?;
 
-        Ok(FrameInfo {
-            source_kind: SourceKind::Rgb,
-            camera_make: ascii_field(&exif, exif::Tag::Make),
-            camera_model: ascii_field(&exif, exif::Tag::Model),
-            lens_model: ascii_field(&exif, exif::Tag::LensModel),
-            width,
-            height,
-            bits_per_sample,
-            cfa_pattern: None,
-            black_level: None,
-            white_level: None,
-            exposure: ExposureInfo {
-                focal_length_mm: rational_field(&exif, exif::Tag::FocalLength),
-                f_number: rational_field(&exif, exif::Tag::FNumber),
-                exposure_time_s: rational_field(&exif, exif::Tag::ExposureTime),
-                iso: uint_field(&exif, exif::Tag::PhotographicSensitivity),
-            },
-            corrections: Corrections {
-                present: None,
-                detail: vec![
-                    "TIFF input is already-demosaiced RGB; baked-in corrections cannot be ruled \
-                     out from the container alone (docs/DECISIONS.md D8)"
-                        .to_owned(),
-                ],
-            },
-        })
+        Ok(tiff_frame_info(width, height, bits_per_sample, &exif))
     }
 
     fn decode(&self, path: &Path) -> Result<DecodedFrame, DecodeError> {
@@ -80,6 +55,11 @@ impl Decoder for TiffDecoder {
         let (width, height) = tiff
             .dimensions()
             .map_err(|source| DecodeError::tiff(path, source))?;
+        let bits_per_sample = tiff
+            .find_tag_unsigned_vec::<u32>(TiffTag::BitsPerSample)
+            .map_err(|source| DecodeError::tiff(path, source))?
+            .and_then(|bits| bits.first().copied())
+            .unwrap_or(1) as usize;
         let color_type = tiff
             .colortype()
             .map_err(|source| DecodeError::tiff(path, source))?;
@@ -98,11 +78,51 @@ impl Decoder for TiffDecoder {
             .map_err(|source| DecodeError::image(path, source))?;
         let pixels = RgbImage::new(dimensions, components, samples, Provenance::unknown())
             .map_err(|source| DecodeError::image(path, source))?;
+        tiff.inner()
+            .seek(SeekFrom::Start(0))
+            .map_err(|source| DecodeError::io(path, source))?;
+        let exif = exif::Reader::new()
+            .read_from_container(tiff.inner())
+            .map_err(|source| DecodeError::exif(path, source))?;
 
         Ok(DecodedFrame {
-            info: self.inspect(path)?,
+            info: tiff_frame_info(width as usize, height as usize, bits_per_sample, &exif),
             pixels: DecodedPixels::Rgb(pixels),
         })
+    }
+}
+
+fn tiff_frame_info(
+    width: usize,
+    height: usize,
+    bits_per_sample: usize,
+    exif: &exif::Exif,
+) -> FrameInfo {
+    FrameInfo {
+        source_kind: SourceKind::Rgb,
+        camera_make: ascii_field(exif, exif::Tag::Make),
+        camera_model: ascii_field(exif, exif::Tag::Model),
+        lens_model: ascii_field(exif, exif::Tag::LensModel),
+        width,
+        height,
+        bits_per_sample,
+        cfa_pattern: None,
+        black_level: None,
+        white_level: None,
+        exposure: ExposureInfo {
+            focal_length_mm: rational_field(exif, exif::Tag::FocalLength),
+            f_number: rational_field(exif, exif::Tag::FNumber),
+            exposure_time_s: rational_field(exif, exif::Tag::ExposureTime),
+            iso: uint_field(exif, exif::Tag::PhotographicSensitivity),
+        },
+        corrections: Corrections {
+            present: None,
+            detail: vec![
+                "TIFF input is already-demosaiced RGB; baked-in corrections cannot be ruled out \
+                 from the container alone (docs/DECISIONS.md D8)"
+                    .to_owned(),
+            ],
+        },
     }
 }
 

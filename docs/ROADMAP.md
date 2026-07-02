@@ -13,14 +13,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Contact sheet output** — add the first visual artefact path: decode frames, extract a display
-  plane, and write a labelled contact sheet without changing `inspect` or starting metric work. This
-  should validate demosaic/display preparation and output I/O before acutance/decentring measurement
-  code.
+- **Acutance metric + `analyse` skeleton** — add the first machine-readable measurement path:
+  consume decoded frames, measure per-zone relative acutance on the existing green/luma planes, and
+  emit the initial canonical JSON shape without adding verdict synthesis or extra metrics.
   - _Depends on:_ Image model + zone geometry; decode pixel path.
-  - _Done when:_ `lenslab contact <paths…> --out <file>` writes a deterministic image artefact from
-    synthetic TIFF input and a real-fixture smoke path, with tests covering output creation and the
-    CLI keeping machine-readable data off stdout unless a command explicitly owns it.
+  - _Done when:_ `lenslab analyse <paths…>` emits deterministic JSON with measured per-zone acutance
+    values for synthetic inputs, keeps diagnostics off stdout, and preserves the
+    measured-vs-inferred split.
 
 ## In Progress
 
@@ -68,6 +67,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   `lenslab-decode`; `inspect` remains metadata-only. _Done when:_ a decoded or synthetic frame can
   be split into the default five-point zone layout with patch sizing, covered by tests — met by the
   core composition tests for synthetic CFA and RGB frames.
+- **Contact sheet output** — `lenslab contact <paths…> --out <file>` decodes DNG/TIFF frames,
+  derives a deterministic display plane from Bayer green or RGB/luma data, and writes a labelled PNG
+  contact sheet without changing `inspect` or starting metric work. Output writes are atomic, stdout
+  stays empty for the human artefact command, unsupported CFA display fails honestly, and the
+  real-fixture gate covers both Bayer success and X-Trans failure. _Done when:_ synthetic TIFF and
+  real-fixture tests cover deterministic PNG creation, labels, output safety, and stdout/stderr
+  separation — met on `feat/contact-sheet-output`.
 
 ## Deferred / known gaps
 
@@ -94,3 +100,8 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   metadata and returns a typed error instead of approximating a green plane. Add correct X-Trans
   extraction later if it becomes small enough to fit the v0.1 path without violating the
   measured-vs-inferred rule.
+- **CLI exit-code taxonomy is not defined yet** — `lenslab` currently distinguishes success from
+  failure, but not all user-facing failure classes have stable numeric exit codes. Define the
+  command-wide taxonomy first (usage/config error, unsupported input, decode failure, render/output
+  failure, internal bug), then implement typed error mapping across existing commands instead of
+  changing `contact` alone.
