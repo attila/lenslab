@@ -16,6 +16,8 @@ this repository; lore remains the portable source of truth.
   lto = true
   opt-level = "z"
   ```
+- Treat release binary size as a design constraint. When adding dependencies, decode paths, or CLI
+  surface area, check `target/release/lenslab` size and justify unexpected growth.
 
 ## Errors
 
