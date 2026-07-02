@@ -9,6 +9,8 @@ mod tiff_decoder;
 
 use std::path::{Path, PathBuf};
 
+use lenslab_core::image::{CfaImage, ImageError, RgbImage};
+
 pub use frame_info::{Corrections, ExposureInfo, FrameInfo, SourceKind};
 pub use rawler_decoder::RawlerDecoder;
 pub use tiff_decoder::TiffDecoder;
@@ -18,6 +20,40 @@ pub trait Decoder {
     /// # Errors
     /// Returns an error if the file cannot be read or its container cannot be parsed.
     fn inspect(&self, path: &Path) -> Result<FrameInfo, DecodeError>;
+
+    /// # Errors
+    /// Returns an error if the file cannot be read, parsed, or converted into project image types.
+    fn decode(&self, path: &Path) -> Result<DecodedFrame, DecodeError>;
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecodedFrame {
+    pub info: FrameInfo,
+    pub pixels: DecodedPixels,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DecodedPixels {
+    Cfa(CfaImage),
+    Rgb(RgbImage),
+}
+
+impl DecodedPixels {
+    #[must_use]
+    pub const fn cfa(&self) -> Option<&CfaImage> {
+        match self {
+            Self::Cfa(image) => Some(image),
+            Self::Rgb(_) => None,
+        }
+    }
+
+    #[must_use]
+    pub const fn rgb(&self) -> Option<&RgbImage> {
+        match self {
+            Self::Rgb(image) => Some(image),
+            Self::Cfa(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -48,6 +84,22 @@ pub enum DecodeError {
     },
     #[error("{path} has no recognised DNG/TIFF extension")]
     UnsupportedExtension { path: PathBuf },
+    #[error("unsupported TIFF colour type in {path}: {color_type:?}")]
+    UnsupportedTiffColor {
+        path: PathBuf,
+        color_type: tiff::ColorType,
+    },
+    #[error("unsupported TIFF sample format in {path}: {sample_format}")]
+    UnsupportedTiffSamples {
+        path: PathBuf,
+        sample_format: &'static str,
+    },
+    #[error("decoded image data in {path} is invalid: {source}")]
+    Image {
+        path: PathBuf,
+        #[source]
+        source: ImageError,
+    },
 }
 
 impl DecodeError {
@@ -74,6 +126,13 @@ impl DecodeError {
 
     fn exif(path: &Path, source: exif::Error) -> Self {
         Self::Exif {
+            path: path.to_owned(),
+            source,
+        }
+    }
+
+    fn image(path: &Path, source: ImageError) -> Self {
+        Self::Image {
             path: path.to_owned(),
             source,
         }

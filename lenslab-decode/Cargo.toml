@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 exif.workspace = true
+lenslab-core = { path = "../lenslab-core" }
 rawler.workspace = true
 serde.workspace = true
 thiserror.workspace = true

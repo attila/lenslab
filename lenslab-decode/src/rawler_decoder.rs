@@ -1,13 +1,17 @@
 use std::path::Path;
 
-use rawler::decoders::{Decoder as RawlerTrait, RawDecodeParams, WellKnownIFD};
+use lenslab_core::image::{
+    BayerPattern, BlackWhiteLevels, CfaImage, CfaPattern, CfaSamples, CorrectionProvenance,
+    Dimensions, LinearityProvenance, Provenance, RgbImage,
+};
+use rawler::decoders::{Decoder as RawlerTrait, RawDecodeParams, RawMetadata, WellKnownIFD};
 use rawler::formats::tiff::Rational;
 use rawler::rawimage::RawPhotometricInterpretation;
 use rawler::rawsource::RawSource;
 use rawler::tags::DngTag;
 
 use crate::frame_info::{Corrections, ExposureInfo, FrameInfo, SourceKind};
-use crate::{DecodeError, Decoder};
+use crate::{DecodeError, DecodedFrame, DecodedPixels, Decoder};
 
 /// Decodes DNG and other camera raws via `rawler` (LGPL-2.1, see `NOTICE`).
 pub struct RawlerDecoder;
@@ -30,63 +34,202 @@ impl Decoder for RawlerDecoder {
             .raw_metadata(&source, &params)
             .map_err(|source| DecodeError::rawler(path, source))?;
 
-        let (source_kind, cfa_pattern) = match &image.photometric {
-            RawPhotometricInterpretation::Cfa(cfg) => (SourceKind::Cfa, Some(cfg.cfa.to_string())),
+        Ok(rawler_frame_info(
+            &image,
+            &metadata,
+            dng_corrections(decoder.as_ref()),
+        ))
+    }
+
+    fn decode(&self, path: &Path) -> Result<DecodedFrame, DecodeError> {
+        let source = RawSource::new(path).map_err(|source| DecodeError::io(path, source))?;
+        let decoder =
+            rawler::get_decoder(&source).map_err(|source| DecodeError::rawler(path, source))?;
+        let params = RawDecodeParams::default();
+        let image = decoder
+            .raw_image(&source, &params, false)
+            .map_err(|source| DecodeError::rawler(path, source))?;
+        let metadata = decoder
+            .raw_metadata(&source, &params)
+            .map_err(|source| DecodeError::rawler(path, source))?;
+        let corrections = dng_corrections(decoder.as_ref());
+        let info = rawler_frame_info(&image, &metadata, corrections.clone());
+        let provenance = rawler_provenance(&corrections);
+        let dimensions = Dimensions::new(image.width, image.height)
+            .map_err(|source| DecodeError::image(path, source))?;
+
+        let pixels = match &image.photometric {
+            RawPhotometricInterpretation::Cfa(cfg) => {
+                let pattern = cfa_pattern(&cfg.cfa.to_string());
+                let black_levels = image.blacklevel.as_vec();
+                let white_levels = image.whitelevel.as_vec();
+                let samples = match image.data {
+                    rawler::RawImageData::Integer(samples) => CfaSamples::U16(samples),
+                    rawler::RawImageData::Float(samples) => CfaSamples::F32(samples),
+                };
+                let image = match pattern {
+                    CfaPattern::Bayer(_) => {
+                        let levels = BlackWhiteLevels::new(&black_levels, &white_levels)
+                            .map_err(|source| DecodeError::image(path, source))?;
+                        CfaImage::from_pattern(dimensions, pattern, samples, levels, provenance)
+                    }
+                    CfaPattern::Unsupported(_) => CfaImage::from_raw_levels(
+                        dimensions,
+                        pattern,
+                        samples,
+                        black_levels,
+                        white_levels,
+                        provenance,
+                    ),
+                }
+                .map_err(|source| DecodeError::image(path, source))?;
+                DecodedPixels::Cfa(image)
+            }
             RawPhotometricInterpretation::BlackIsZero | RawPhotometricInterpretation::LinearRaw => {
-                (SourceKind::Rgb, None)
+                let samples = match image.data {
+                    rawler::RawImageData::Integer(samples) => normalise_raw_rgb_samples(
+                        samples,
+                        image.cpp,
+                        &image.blacklevel.as_vec(),
+                        &image.whitelevel.as_vec(),
+                        path,
+                    )?,
+                    rawler::RawImageData::Float(samples) => samples,
+                };
+                DecodedPixels::Rgb(
+                    RgbImage::new(dimensions, image.cpp, samples, provenance)
+                        .map_err(|source| DecodeError::image(path, source))?,
+                )
             }
         };
 
-        let lens_model = metadata
-            .lens
-            .as_ref()
-            .map(|lens| lens.lens_name.clone())
-            .or_else(|| metadata.exif.lens_model.as_deref().and_then(non_empty));
+        Ok(DecodedFrame { info, pixels })
+    }
+}
 
-        Ok(FrameInfo {
-            source_kind,
-            camera_make: non_empty(&metadata.make),
-            camera_model: non_empty(&metadata.model),
-            lens_model,
-            width: image.width,
-            height: image.height,
-            bits_per_sample: image.bps,
-            cfa_pattern,
-            black_level: Some(
-                image
-                    .blacklevel
-                    .levels
-                    .iter()
-                    .map(Rational::as_f32)
-                    .collect(),
-            ),
-            white_level: Some(image.whitelevel.as_vec()),
-            exposure: ExposureInfo {
-                focal_length_mm: metadata
-                    .exif
-                    .focal_length
-                    .as_ref()
-                    .map(Rational::as_f32)
-                    .filter(|value| value.is_finite()),
-                f_number: metadata
-                    .exif
-                    .fnumber
-                    .as_ref()
-                    .map(Rational::as_f32)
-                    .filter(|value| value.is_finite()),
-                exposure_time_s: metadata
-                    .exif
-                    .exposure_time
-                    .as_ref()
-                    .map(Rational::as_f32)
-                    .filter(|value| value.is_finite()),
-                iso: metadata
-                    .exif
-                    .iso_speed
-                    .or_else(|| metadata.exif.iso_speed_ratings.map(u32::from)),
-            },
-            corrections: dng_corrections(decoder.as_ref()),
+fn rawler_frame_info(
+    image: &rawler::RawImage,
+    metadata: &RawMetadata,
+    corrections: Corrections,
+) -> FrameInfo {
+    let (source_kind, cfa_pattern) = match &image.photometric {
+        RawPhotometricInterpretation::Cfa(cfg) => (SourceKind::Cfa, Some(cfg.cfa.to_string())),
+        RawPhotometricInterpretation::BlackIsZero | RawPhotometricInterpretation::LinearRaw => {
+            (SourceKind::Rgb, None)
+        }
+    };
+
+    let lens_model = metadata
+        .lens
+        .as_ref()
+        .map(|lens| lens.lens_name.clone())
+        .or_else(|| metadata.exif.lens_model.as_deref().and_then(non_empty));
+
+    FrameInfo {
+        source_kind,
+        camera_make: non_empty(&metadata.make),
+        camera_model: non_empty(&metadata.model),
+        lens_model,
+        width: image.width,
+        height: image.height,
+        bits_per_sample: image.bps,
+        cfa_pattern,
+        black_level: Some(
+            image
+                .blacklevel
+                .levels
+                .iter()
+                .map(Rational::as_f32)
+                .collect(),
+        ),
+        white_level: Some(image.whitelevel.as_vec()),
+        exposure: ExposureInfo {
+            focal_length_mm: metadata
+                .exif
+                .focal_length
+                .as_ref()
+                .map(Rational::as_f32)
+                .filter(|value| value.is_finite()),
+            f_number: metadata
+                .exif
+                .fnumber
+                .as_ref()
+                .map(Rational::as_f32)
+                .filter(|value| value.is_finite()),
+            exposure_time_s: metadata
+                .exif
+                .exposure_time
+                .as_ref()
+                .map(Rational::as_f32)
+                .filter(|value| value.is_finite()),
+            iso: metadata
+                .exif
+                .iso_speed
+                .or_else(|| metadata.exif.iso_speed_ratings.map(u32::from)),
+        },
+        corrections,
+    }
+}
+
+fn rawler_provenance(corrections: &Corrections) -> Provenance {
+    let corrections = match corrections.present {
+        Some(false) => CorrectionProvenance::Absent,
+        Some(true) => CorrectionProvenance::Present,
+        None => CorrectionProvenance::Unknown,
+    };
+    Provenance::new(corrections, LinearityProvenance::Linear)
+}
+
+fn cfa_pattern(pattern: &str) -> CfaPattern {
+    match pattern {
+        "RGGB" => CfaPattern::Bayer(BayerPattern::Rggb),
+        "BGGR" => CfaPattern::Bayer(BayerPattern::Bggr),
+        "GBRG" => CfaPattern::Bayer(BayerPattern::Gbrg),
+        "GRBG" => CfaPattern::Bayer(BayerPattern::Grbg),
+        other => CfaPattern::Unsupported(other.to_owned()),
+    }
+}
+
+fn normalise_raw_rgb_samples(
+    samples: Vec<u16>,
+    components: usize,
+    black_levels: &[f32],
+    white_levels: &[f32],
+    path: &Path,
+) -> Result<Vec<f32>, DecodeError> {
+    samples
+        .into_iter()
+        .enumerate()
+        .map(|(index, sample)| {
+            let component = index % components;
+            let black = component_level("black", black_levels, component)
+                .map_err(|source| DecodeError::image(path, source))?;
+            let white = component_level("white", white_levels, component)
+                .map_err(|source| DecodeError::image(path, source))?;
+            if !(black.is_finite() && white.is_finite() && white > black) {
+                return Err(DecodeError::image(
+                    path,
+                    lenslab_core::image::ImageError::InvalidLevelRange { black, white },
+                ));
+            }
+            Ok((f32::from(sample) - black) / (white - black))
         })
+        .collect()
+}
+
+fn component_level(
+    kind: &'static str,
+    levels: &[f32],
+    component: usize,
+) -> Result<f32, lenslab_core::image::ImageError> {
+    match levels {
+        [] => Err(lenslab_core::image::ImageError::InvalidLevelCount { kind, count: 0 }),
+        [level] => Ok(*level),
+        levels if component < levels.len() => Ok(levels[component]),
+        levels => Err(lenslab_core::image::ImageError::InvalidLevelCount {
+            kind,
+            count: levels.len(),
+        }),
     }
 }
 
@@ -126,7 +269,10 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[cfg(feature = "real-fixtures")]
-    use crate::{Decoder, SourceKind};
+    use crate::{DecodedPixels, Decoder, SourceKind};
+
+    #[cfg(feature = "real-fixtures")]
+    use lenslab_core::image::{CfaLevels, CfaPattern};
 
     #[cfg(feature = "real-fixtures")]
     use super::RawlerDecoder;
@@ -180,6 +326,24 @@ mod tests {
             info.corrections.detail,
             ["DNG OpcodeList2 present", "DNG OpcodeList3 present"]
         );
+    }
+
+    #[cfg(feature = "real-fixtures")]
+    #[test]
+    fn decodes_xtrans_fixture_as_unsupported_cfa_without_losing_levels() {
+        let path = fixture_path("xtrans_xt3.dng");
+        assert!(path.exists(), "missing fixture: {}", path.display());
+
+        let frame = RawlerDecoder.decode(&path).expect("fixture should decode");
+        let DecodedPixels::Cfa(image) = frame.pixels else {
+            panic!("expected CFA pixels");
+        };
+
+        assert!(matches!(image.pattern(), CfaPattern::Unsupported(pattern) if pattern.len() == 36));
+        assert!(matches!(
+            image.levels(),
+            CfaLevels::Raw { black, white } if black.len() == 36 && white.len() == 1
+        ));
     }
 
     #[cfg(feature = "real-fixtures")]

@@ -753,6 +753,7 @@ name = "lenslab-decode"
 version = "0.1.0"
 dependencies = [
  "kamadak-exif",
+ "lenslab-core",
  "rawler",
  "serde",
  "tempfile",
