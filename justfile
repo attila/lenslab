@@ -22,6 +22,10 @@ clippy:
 test:
     cargo test
 
+# Run real-camera DNG fixture tests
+test-fixtures: fixtures
+    cargo test -p lenslab-decode --features real-fixtures
+
 # Run dependency audits
 #
 # `GIT_CONFIG_*` overrides neutralise URL rewrites before gix (used by
@@ -39,6 +43,10 @@ doc:
 # Install lenslab to ~/.cargo/bin
 install:
     cargo install --path .
+
+# Download real-camera DNG fixtures (see docs/ROADMAP.md "Real DNG fixture")
+fixtures:
+    bash scripts/fetch-dng-fixtures.sh
 
 # Regenerate CHANGELOG.md from git history.
 #

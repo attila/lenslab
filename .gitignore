@@ -7,6 +7,11 @@
 # decoded scratch
 *.raw
 
+# real-camera DNG fixtures — fetched by `just fixtures`, not committed (see
+# scripts/fetch-dng-fixtures.sh, docs/DECISIONS.md D10). Ground-truth sidecars
+# (e.g. *.exiftool.txt) alongside them are small text and stay committed.
+/tests/fixtures/dng/*.dng
+
 # cargo-zigbuild scratch file (Apple linker workaround for empty rlibs).
 .intentionally-empty-file.o
 

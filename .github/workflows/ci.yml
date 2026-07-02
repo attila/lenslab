@@ -55,7 +55,13 @@ jobs:
       - uses: taiki-e/install-action@6ef672efc2b5aabc787a9e94baf4989aa02a97df # v2.70.3
         with:
           tool: just
+      - name: Cache DNG fixtures
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: tests/fixtures/dng
+          key: dng-fixtures-v1-06221d01-5fb69596
       - run: just test
+      - run: just test-fixtures
 
   deny:
     name: Deny
