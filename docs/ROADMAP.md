@@ -21,6 +21,21 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   for unknown-correction inputs; synthetic tests cover a known injected channel shift; real fixture
   tests keep Bayer success and X-Trans/corrected rejection behaviour intact.
 
+## Remaining v0.1 Measurement Backlog
+
+- **Distortion skeleton** — report measured or explicitly inferred straight-line bow evidence
+  without over-claiming edge distortion from weak references.
+- **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
+  preserving the distinction from measured focus-bracket curvature.
+- **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
+  gated target frames without promoting scene-only evidence to a copy verdict.
+- **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
+  into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
+  controlled.
+- **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
+  centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
+  narrative judgement in the plugin.
+
 ## In Progress
 
 - _(none yet)_
