@@ -13,7 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- _(none yet)_
+- **Vignetting aperture-difference skeleton** — measure centre/corner luminance falloff from the
+  existing five-zone planes, report per-group evidence in JSON, and use aperture-difference
+  comparison where the group set supports it so fixed lighting or target gradients are not confused
+  with optical vignetting.
+  - _Depends on:_ decentring aggregation + first QA gate.
+  - _Done when:_ `analyse` reports measured falloff evidence without inferring optical vignetting
+    from uncontrolled scene-only data; unknown-correction inputs remain measurable for inspection
+    but excluded from optical aggregation; synthetic or real fixtures cover known falloff,
+    deterministic output, and stdout-empty failures.
 
 ## In Progress
 
