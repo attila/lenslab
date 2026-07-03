@@ -13,12 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Decentring aggregation + first QA gate** — consume the acutance/contrast skeleton output,
-  compare zone symmetry across frames, and add the first target-quality gate before any copy verdict
-  is emitted.
-  - _Depends on:_ `analyse` acutance/contrast skeleton.
-  - _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
-    scene-only or ungated inference as a copy verdict.
+- **Vignetting aperture-difference skeleton** — measure centre/corner luminance falloff from the
+  existing five-zone planes, report per-group evidence in JSON, and use aperture-difference
+  comparison where the group set supports it so fixed lighting or target gradients are not confused
+  with optical vignetting.
+  - _Depends on:_ decentring aggregation + first QA gate.
+  - _Done when:_ `analyse` reports measured falloff evidence without inferring optical vignetting
+    from uncontrolled scene-only data; unknown-correction inputs remain measurable for inspection
+    but excluded from optical aggregation; synthetic or real fixtures cover known falloff,
+    deterministic output, and stdout-empty failures.
 
 ## In Progress
 
@@ -80,6 +83,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   lens-copy verdict, QA result, artefacts, vignetting, CA, distortion, field curvature, or MTF50.
   _Done when:_ synthetic TIFF and real-fixture tests cover stdout/stderr separation, byte-stable
   output, Bayer DNG measurement, TIFF unknown-correction provenance, and corrected-input rejection.
+- **Decentring aggregation + first QA gate** — `lenslab analyse <paths…>` emits skeleton schema
+  `0.1-decentring` with group-level left/right corner-pair evidence derived from measured acutance,
+  pair-local exclusions for unknown corrections and low texture, and target quality marked as not
+  assessed until real keystone estimation exists. It still emits no centred/decentred copy verdict.
+  _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
+  scene-only or ungated inference as a copy verdict — met by commit `2e43560`.
 
 ## Deferred / known gaps
 

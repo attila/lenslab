@@ -85,8 +85,9 @@ fail squareness/shake thresholds (reported, not silently dropped).
 
 Current implementation note: the shipped `analyse` command is a narrow explicit-file skeleton:
 `lenslab analyse <paths…>` emits pretty JSON with acutance, contrast, five fixed zones, correction
-provenance, and no verdict. Directory recursion, `--format`, frame-role detection, config files, QA
-gates, artefact generation, and the exit-code taxonomy below are target contract, not current
+provenance, group-level left/right decentring evidence, pair-local QA exclusions, and no copy
+verdict. Directory recursion, `--format`, frame-role detection, config files, real keystone
+estimation, artefact generation, and the exit-code taxonomy below are target contract, not current
 behaviour.
 
 ```
@@ -115,9 +116,11 @@ lenslab inspect  <file>               # EXIF + decode info + corrections-present
 
 ## 6. JSON contract (canonical output)
 
-Current implementation note: the skeleton schema is `"0.1-acutance"`, not the full `"1.0"` shape
-below. It omits `generated_utc`, artefacts, QA, vignetting, CA, distortion, MTF50, and verdicts
-until those values can be populated honestly.
+Current implementation note: the skeleton schema is `"0.1-decentring"`, not the full `"1.0"` shape
+below. It includes acutance/contrast zones, derived left/right decentring evidence, unknown
+correction and low-texture exclusions, and target quality marked as not assessed. It omits
+`generated_utc`, artefacts, real keystone QA, vignetting, CA, distortion, MTF50, and verdicts until
+those values can be populated honestly.
 
 Versioned (`schema_version`), stable, documented. Shape:
 

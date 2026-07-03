@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, bail};
 use lenslab_core::channels::{extract_green, extract_luma};
 use lenslab_core::metrics::acutance::measure_acutance;
+use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
 use lenslab_core::schema::{
     AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, FrameMeasurement, Measurements,
     SharpnessMeasurements, SourceKind, ZoneMeasurement, ZoneMeasurements,
@@ -49,7 +50,7 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
         });
     }
 
-    let report = AnalyseReport::new(env!("CARGO_PKG_VERSION"), inputs, group_frames(frames));
+    let report = AnalyseReport::new(env!("CARGO_PKG_VERSION"), inputs, group_frames(frames)?);
     let mut stdout = std::io::stdout().lock();
     serde_json::to_writer_pretty(&mut stdout, &report)?;
     writeln!(stdout)?;
@@ -205,25 +206,40 @@ struct AnalysedFrame {
     measurement: FrameMeasurement,
 }
 
-fn group_frames(frames: Vec<AnalysedFrame>) -> Vec<AnalyseGroup> {
-    let mut groups: Vec<AnalyseGroup> = Vec::new();
+fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>> {
+    let mut groups: Vec<GroupedFrames> = Vec::new();
     for frame in frames {
         if let Some(group) = groups.iter_mut().find(|group| {
-            group.lens_model == frame.key.lens_model
-                && group.focal_length_mm == frame.key.focal_length_mm
-                && group.f_number == frame.key.f_number
+            group.key.lens_model == frame.key.lens_model
+                && group.key.focal_length_mm == frame.key.focal_length_mm
+                && group.key.f_number == frame.key.f_number
         }) {
             group.frames.push(frame.measurement);
         } else {
-            groups.push(AnalyseGroup {
-                lens_model: frame.key.lens_model,
-                focal_length_mm: frame.key.focal_length_mm,
-                f_number: frame.key.f_number,
+            groups.push(GroupedFrames {
+                key: frame.key,
                 frames: vec![frame.measurement],
             });
         }
     }
-    groups
+    let mut analyse_groups = Vec::with_capacity(groups.len());
+    for group in groups {
+        let decentring = aggregate_left_right_decentring(&group.frames)
+            .context("failed to aggregate decentring evidence")?;
+        analyse_groups.push(AnalyseGroup {
+            lens_model: group.key.lens_model,
+            focal_length_mm: group.key.focal_length_mm,
+            f_number: group.key.f_number,
+            decentring,
+            frames: group.frames,
+        });
+    }
+    Ok(analyse_groups)
+}
+
+struct GroupedFrames {
+    key: GroupKey,
+    frames: Vec<FrameMeasurement>,
 }
 
 #[cfg(test)]
@@ -277,7 +293,8 @@ mod tests {
             analysed_frame(0, first_key.clone()),
             analysed_frame(1, second_key),
             analysed_frame(2, first_key),
-        ]);
+        ])
+        .unwrap();
 
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].lens_model.as_deref(), Some("50mm"));

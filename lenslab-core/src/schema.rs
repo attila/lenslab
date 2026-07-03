@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-acutance";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-decentring";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -46,7 +46,83 @@ pub struct AnalyseGroup {
     pub lens_model: Option<String>,
     pub focal_length_mm: Option<f32>,
     pub f_number: Option<f32>,
+    pub decentring: DecentringEvidence,
     pub frames: Vec<FrameMeasurement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DecentringEvidence {
+    pub method: DecentringMethod,
+    pub target_quality: TargetQuality,
+    pub left_right: LeftRightDecentring,
+}
+
+impl DecentringEvidence {
+    #[must_use]
+    pub fn not_assessed(left_right: LeftRightDecentring) -> Self {
+        Self {
+            method: DecentringMethod::DerivedFromMeasuredAcutance,
+            target_quality: TargetQuality::not_assessed(),
+            left_right,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TargetQuality {
+    pub status: TargetQualityStatus,
+    pub blockers: Vec<TargetQualityBlocker>,
+}
+
+impl TargetQuality {
+    #[must_use]
+    pub fn not_assessed() -> Self {
+        Self {
+            status: TargetQualityStatus::NotAssessed,
+            blockers: vec![TargetQualityBlocker::KeystoneNotAssessed],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct LeftRightDecentring {
+    pub top_pair: PairSummary,
+    pub bottom_pair: PairSummary,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PairSummary {
+    pub id: PairId,
+    pub included_samples: usize,
+    pub excluded_samples: usize,
+    pub mean_delta: Option<DerivedNumericMeasurement>,
+    pub scatter: Option<DerivedNumericMeasurement>,
+    pub reliability_blockers: Vec<ReliabilityBlocker>,
+    pub excluded: Vec<ExclusionCount>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ExclusionCount {
+    pub reason: ExclusionReason,
+    pub count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DerivedNumericMeasurement {
+    pub value: f32,
+    pub unit: NumericUnit,
+    pub method: DecentringMethod,
+}
+
+impl DerivedNumericMeasurement {
+    #[must_use]
+    pub fn acutance_delta(value: f32) -> Option<Self> {
+        value.is_finite().then_some(Self {
+            value,
+            unit: NumericUnit::AcutanceDelta,
+            method: DecentringMethod::DerivedFromMeasuredAcutance,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -164,6 +240,7 @@ pub enum CorrectionStatus {
 #[serde(rename_all = "snake_case")]
 pub enum NumericUnit {
     Acutance,
+    AcutanceDelta,
     Ratio,
 }
 
@@ -175,6 +252,44 @@ pub enum MeasurementMethod {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum DecentringMethod {
+    DerivedFromMeasuredAcutance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetQualityStatus {
+    NotAssessed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetQualityBlocker {
+    KeystoneNotAssessed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PairId {
+    TopLeftMinusTopRight,
+    BottomLeftMinusBottomRight,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReliabilityBlocker {
+    InsufficientSamples,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExclusionReason {
+    UnknownCorrections,
+    LowTexture,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TextureMethod {
     DerivedThreshold,
 }
@@ -182,8 +297,10 @@ pub enum TextureMethod {
 #[cfg(test)]
 mod tests {
     use super::{
-        AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, FrameMeasurement,
-        Measurements, SharpnessMeasurements, SourceKind, ZoneMeasurement, ZoneMeasurements,
+        AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, DecentringEvidence,
+        DerivedNumericMeasurement, ExclusionCount, ExclusionReason, FrameMeasurement,
+        LeftRightDecentring, Measurements, PairId, PairSummary, ReliabilityBlocker,
+        SharpnessMeasurements, SourceKind, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
@@ -213,6 +330,60 @@ mod tests {
         }
     }
 
+    fn pair(
+        id: PairId,
+        included_samples: usize,
+        excluded: Vec<ExclusionCount>,
+        mean_delta: Option<f32>,
+        scatter: Option<f32>,
+    ) -> PairSummary {
+        let reliability_blockers = if included_samples < 2 {
+            vec![ReliabilityBlocker::InsufficientSamples]
+        } else {
+            vec![]
+        };
+        let excluded_samples = excluded.iter().map(|count| count.count).sum();
+        PairSummary {
+            id,
+            included_samples,
+            excluded_samples,
+            mean_delta: mean_delta.map(|value| {
+                DerivedNumericMeasurement::acutance_delta(value).expect("finite mean delta")
+            }),
+            scatter: scatter.map(|value| {
+                DerivedNumericMeasurement::acutance_delta(value).expect("finite scatter")
+            }),
+            reliability_blockers,
+            excluded,
+        }
+    }
+
+    fn decentring(top_pair: PairSummary, bottom_pair: PairSummary) -> DecentringEvidence {
+        DecentringEvidence::not_assessed(LeftRightDecentring {
+            top_pair,
+            bottom_pair,
+        })
+    }
+
+    fn two_sample_decentring() -> DecentringEvidence {
+        decentring(
+            pair(
+                PairId::TopLeftMinusTopRight,
+                2,
+                vec![],
+                Some(0.05),
+                Some(0.01),
+            ),
+            pair(
+                PairId::BottomLeftMinusBottomRight,
+                2,
+                vec![],
+                Some(-0.03),
+                Some(0.02),
+            ),
+        )
+    }
+
     #[test]
     fn serialises_confirmed_uncorrected_skeleton_in_field_order() {
         let report = AnalyseReport::new(
@@ -233,6 +404,7 @@ mod tests {
                 lens_model: Some("50mm".to_owned()),
                 focal_length_mm: Some(50.0),
                 f_number: Some(8.0),
+                decentring: two_sample_decentring(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -240,10 +412,55 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-acutance\","));
-        assert_eq!(value["schema_version"], "0.1-acutance");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-decentring\","));
+        assert_eq!(value["schema_version"], "0.1-decentring");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
+        assert!(
+            json.find("\"f_number\"")
+                .expect("group f_number is serialised")
+                < json
+                    .find("\"decentring\"")
+                    .expect("group decentring is serialised")
+        );
+        assert!(
+            json.find("\"decentring\"")
+                .expect("group decentring is serialised")
+                < json
+                    .find("\"frames\"")
+                    .expect("group frames are serialised")
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["method"],
+            "derived_from_measured_acutance"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["status"],
+            "not_assessed"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["blockers"][0],
+            "keystone_not_assessed"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["id"],
+            "top_left_minus_top_right"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["mean_delta"]["unit"],
+            "acutance_delta"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["mean_delta"]["method"],
+            "derived_from_measured_acutance"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["reliability_blockers"]
+                .as_array()
+                .unwrap()
+                .len(),
+            0
+        );
         assert_eq!(value["groups"][0]["frames"][0]["input_index"], 0);
         assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
@@ -265,9 +482,64 @@ mod tests {
                 ["method"],
             "derived_threshold"
         );
-        assert!(value.get("generated_utc").is_none());
-        assert!(value.get("verdict").is_none());
-        assert!(value.get("artifacts").is_none());
+    }
+
+    #[test]
+    fn serialises_no_future_verdict_or_artifact_fields() {
+        let report = AnalyseReport::new("0.1.0", vec![], vec![]);
+        let value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string_pretty(&report).unwrap()).unwrap();
+
+        for key in [
+            "generated_utc",
+            "verdict",
+            "copy",
+            "centred",
+            "decentred",
+            "confidence",
+            "artifacts",
+        ] {
+            assert!(value.get(key).is_none(), "{key}");
+        }
+    }
+
+    #[test]
+    fn serialises_one_sample_decentring_without_scatter() {
+        let report = AnalyseReport::new(
+            "0.1.0",
+            vec![],
+            vec![AnalyseGroup {
+                lens_model: None,
+                focal_length_mm: None,
+                f_number: None,
+                decentring: decentring(
+                    pair(PairId::TopLeftMinusTopRight, 1, vec![], Some(0.05), None),
+                    pair(
+                        PairId::BottomLeftMinusBottomRight,
+                        1,
+                        vec![ExclusionCount {
+                            reason: ExclusionReason::LowTexture,
+                            count: 1,
+                        }],
+                        Some(-0.03),
+                        None,
+                    ),
+                ),
+                frames: vec![frame(0, "a.dng", true)],
+            }],
+        );
+
+        let value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string_pretty(&report).unwrap()).unwrap();
+        let top_pair = &value["groups"][0]["decentring"]["left_right"]["top_pair"];
+        let bottom_pair = &value["groups"][0]["decentring"]["left_right"]["bottom_pair"];
+
+        assert_eq!(top_pair["included_samples"], 1);
+        assert_eq!(top_pair["scatter"], serde_json::Value::Null);
+        assert_eq!(top_pair["reliability_blockers"][0], "insufficient_samples");
+        assert_eq!(bottom_pair["excluded_samples"], 1);
+        assert_eq!(bottom_pair["excluded"][0]["reason"], "low_texture");
+        assert_eq!(bottom_pair["excluded"][0]["count"], 1);
     }
 
     #[test]
@@ -292,6 +564,28 @@ mod tests {
                 lens_model: None,
                 focal_length_mm: None,
                 f_number: None,
+                decentring: decentring(
+                    pair(
+                        PairId::TopLeftMinusTopRight,
+                        0,
+                        vec![ExclusionCount {
+                            reason: ExclusionReason::UnknownCorrections,
+                            count: 1,
+                        }],
+                        None,
+                        None,
+                    ),
+                    pair(
+                        PairId::BottomLeftMinusBottomRight,
+                        0,
+                        vec![ExclusionCount {
+                            reason: ExclusionReason::UnknownCorrections,
+                            count: 1,
+                        }],
+                        None,
+                        None,
+                    ),
+                ),
                 frames: vec![frame(0, "a.tif", false)],
             }],
         );
@@ -312,6 +606,22 @@ mod tests {
             false
         );
         assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["included_samples"],
+            0
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["mean_delta"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["scatter"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["left_right"]["top_pair"]["excluded"][0]["reason"],
+            "unknown_corrections"
+        );
+        assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
                 ["confidence"],
             0.0
@@ -322,6 +632,8 @@ mod tests {
     fn rejects_non_finite_numeric_measurements() {
         assert!(ZoneMeasurement::measured(f32::NAN, 0.1, true).is_none());
         assert!(ZoneMeasurement::measured(0.1, f32::INFINITY, true).is_none());
+        assert!(DerivedNumericMeasurement::acutance_delta(f32::NAN).is_none());
+        assert!(DerivedNumericMeasurement::acutance_delta(f32::NEG_INFINITY).is_none());
     }
 
     #[test]
@@ -334,12 +646,14 @@ mod tests {
                     lens_model: None,
                     focal_length_mm: None,
                     f_number: None,
+                    decentring: two_sample_decentring(),
                     frames: vec![frame(0, "first.tif", false), frame(2, "third.tif", false)],
                 },
                 AnalyseGroup {
                     lens_model: Some("50mm".to_owned()),
                     focal_length_mm: None,
                     f_number: None,
+                    decentring: two_sample_decentring(),
                     frames: vec![frame(1, "second.tif", false)],
                 },
             ],
