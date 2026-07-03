@@ -13,7 +13,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- _(none yet)_
+- **Lateral CA skeleton** — measure per-corner red/blue channel displacement from demosaiced patches
+  and report evidence without turning it into a lens verdict. Dependencies: existing
+  decode/image/zone pipeline, `analyse` grouping, and the vignetting-era schema pattern for
+  evidence-only metrics. _Done when:_ `lenslab analyse <paths…>` emits schema `0.1-ca` with measured
+  per-frame lateral CA evidence in px@fullres, group-level corner summaries and exclusion evidence
+  for unknown-correction inputs; synthetic tests cover a known injected channel shift; real fixture
+  tests keep Bayer success and X-Trans/corrected rejection behaviour intact.
 
 ## In Progress
 
