@@ -80,7 +80,7 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   pair-local exclusions for unknown corrections and low texture, and target quality marked as not
   assessed until real keystone estimation exists. It still emits no centred/decentred copy verdict.
   _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
-  scene-only or ungated inference as a copy verdict — met by this change.
+  scene-only or ungated inference as a copy verdict — met by commit `2e43560`.
 
 ## Deferred / known gaps
 
