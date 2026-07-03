@@ -12,9 +12,10 @@ tilted copy — sharpness vs aperture, decentring, vignetting, lateral CA, disto
 CLI for deterministic measurement plus a Claude plugin that coaches the test shots and reads the
 numbers into a verdict.
 
-Status: pre-implementation. The design is the source of truth — start at `docs/GENESIS.md`, then
-`docs/SPEC.md`, `docs/ALGORITHMS.md`, `docs/DECISIONS.md`, `docs/SKILL_PLUGIN.md`. A validated
-prototype lives under `reference/`.
+Status: not pre-implementation; see `docs/ROADMAP.md` for current implementation status. The design
+is the source of truth for target behaviour — start at `docs/GENESIS.md`, then `docs/SPEC.md`,
+`docs/ALGORITHMS.md`, `docs/DECISIONS.md`, `docs/SKILL_PLUGIN.md`. A validated prototype lives under
+`reference/`.
 
 ## Least code that earns its place
 
@@ -34,7 +35,7 @@ autonomy.
 
 ## Layout & boundaries
 
-Planned Cargo workspace:
+Cargo workspace:
 
 - `lenslab-core` — measurement and analysis. Permissive (MIT/Apache-2.0). No LGPL or copyleft
   dependencies.

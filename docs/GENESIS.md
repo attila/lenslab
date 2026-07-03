@@ -2,9 +2,9 @@
 
 > Single entry point for a Claude Code (or human) session picking this project up cold. Read this
 > top to bottom, then `docs/SPEC.md` → `docs/ALGORITHMS.md` → `docs/DECISIONS.md` →
-> `docs/SKILL_PLUGIN.md`. **No Rust has been written yet.** This repo currently contains design docs
-> and a validated Python/C prototype under `reference/prototype/`. Your job is to build v0.1 from
-> these.
+> `docs/SKILL_PLUGIN.md`. The Rust workspace now contains `inspect`, `contact`, image/zones, real
+> fixtures, and an `analyse` acutance/contrast skeleton. Full verdict analysis remains future work.
+> The validated Python/C prototype under `reference/prototype/` remains the algorithm reference.
 
 ## TL;DR
 
@@ -54,36 +54,34 @@ See `docs/DECISIONS.md` for rationale. Summary:
 
 ## What you are building (v0.1)
 
-A Cargo workspace (`crates/lenslab-core`, `crates/lenslab-decode`, `crates/lenslab-cli`) plus a
-`plugin/` Claude plugin. Full surface in `docs/SPEC.md`. The measurement maths is already specified
-and validated in `docs/ALGORITHMS.md` — port it, don't reinvent it.
+A Cargo workspace (`lenslab-core`, `lenslab-decode`, `lenslab-cli`) plus a `plugin/` Claude plugin.
+Full surface in `docs/SPEC.md`. The measurement maths is already specified and validated in
+`docs/ALGORITHMS.md` — port it, don't reinvent it.
 
 Design principle, non-negotiable: **deterministic measurement in Rust; judgement, coaching and
 narrative in the plugin; versioned JSON is the boundary.** The plugin never re-measures.
 
-## Repo map (target)
+## Repo map
 
 ```
 lenslab/
   Cargo.toml                 # workspace
   rust-toolchain.toml
   LICENSE-MIT  LICENSE-APACHE  NOTICE
-  README.md  GENESIS.md
+  README.md
   docs/        SPEC.md  ALGORITHMS.md  DECISIONS.md  SKILL_PLUGIN.md
-  crates/
-    lenslab-core/            # lib: image model, demosaic, zones, metrics, qa, group, schema, synth
-    lenslab-decode/          # lib: Decoder trait + rawler/tiff impls (LGPL boundary lives here)
-    lenslab-cli/             # bin: clap, orchestration, report rendering
-  plugin/
+  lenslab-core/              # lib: image model, channels, zones, metrics, schema
+  lenslab-decode/            # lib: Decoder trait + rawler/tiff impls (LGPL boundary lives here)
+  lenslab-cli/               # bin: clap, orchestration, report rendering
+  plugin/                    # target Claude plugin; not implemented yet
     .claude-plugin/plugin.json
     skills/lens-test/SKILL.md
     skills/lens-test/references/{shooting-guide.md,interpreting-results.md}
-  fixtures/                  # synthetic ground-truth generators (Rust) for tests
-  tests/                     # integration tests over fixtures + a tiny sample set
+  tests/                     # real DNG fixture metadata and downloaded fixture location
   reference/
     prototype/               # THIS SESSION'S WORKING CODE — port from here
     sample_outputs/          # example artifacts (corner crops, wall ladder)
-  .github/workflows/ci.yml
+  scripts/                   # fixture fetch and release helpers
 ```
 
 ## Start here (suggested order for v0.1)
@@ -94,12 +92,14 @@ lenslab/
 2. Image model + single-green-plane extraction + zone geometry
    (`docs/ALGORITHMS.md §Channel, §Zones`).
 3. `contact` (contact sheet) — cheap, validates demosaic + I/O.
-4. Acutance metric + `analyse` skeleton emitting JSON. Decentring aggregate + QA keystone gate.
-5. Vignetting (aperture-difference method). CA. Distortion. Field-curvature inference.
-6. Slanted-edge MTF50 for target shots (heaviest; acutance is the fallback and already works).
-7. Synthetic fixtures with injected MTF/vignette/distortion → assert measured values within
+4. Acutance metric + `analyse` skeleton emitting JSON. **Current implementation reaches this
+   acutance/contrast skeleton only; no verdict is emitted.**
+5. Decentring aggregate + QA keystone gate.
+6. Vignetting (aperture-difference method). CA. Distortion. Field-curvature inference.
+7. Slanted-edge MTF50 for target shots (heaviest; acutance is the fallback and already works).
+8. Synthetic fixtures with injected MTF/vignette/distortion → assert measured values within
    tolerance. **Build these early enough to validate steps 4–6.**
-8. The plugin: `SKILL.md` orchestrating the built binary; port the shooting guide and interpretation
+9. The plugin: `SKILL.md` orchestrating the built binary; port the shooting guide and interpretation
    guide from `docs/`.
 
 ## Environment caveats (important)
