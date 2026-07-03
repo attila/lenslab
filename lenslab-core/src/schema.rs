@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-decentring";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-vignetting";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -47,6 +47,7 @@ pub struct AnalyseGroup {
     pub focal_length_mm: Option<f32>,
     pub f_number: Option<f32>,
     pub decentring: DecentringEvidence,
+    pub vignetting: VignettingEvidence,
     pub frames: Vec<FrameMeasurement>,
 }
 
@@ -136,6 +137,7 @@ pub struct FrameMeasurement {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Measurements {
     pub sharpness: SharpnessMeasurements,
+    pub vignetting: VignettingMeasurements,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -170,13 +172,19 @@ impl ZoneMeasurements {
 pub struct ZoneMeasurement {
     pub acutance: NumericMeasurement,
     pub contrast: NumericMeasurement,
+    pub luminance: NumericMeasurement,
     pub texture_usable: TextureUsable,
 }
 
 impl ZoneMeasurement {
     #[must_use]
-    pub fn measured(acutance: f32, contrast: f32, aggregation_eligible: bool) -> Option<Self> {
-        if !acutance.is_finite() || !contrast.is_finite() {
+    pub fn measured(
+        acutance: f32,
+        contrast: f32,
+        luminance: f32,
+        aggregation_eligible: bool,
+    ) -> Option<Self> {
+        if !acutance.is_finite() || !contrast.is_finite() || !luminance.is_finite() {
             return None;
         }
         let texture_usable = contrast >= TEXTURE_USABLE_THRESHOLD;
@@ -198,11 +206,107 @@ impl ZoneMeasurement {
                 method: MeasurementMethod::Measured,
                 confidence,
             },
+            luminance: NumericMeasurement {
+                value: luminance,
+                unit: NumericUnit::LinearLuminance,
+                method: MeasurementMethod::Measured,
+                confidence,
+            },
             texture_usable: TextureUsable {
                 value: texture_usable,
                 threshold: TEXTURE_USABLE_THRESHOLD,
                 method: TextureMethod::DerivedThreshold,
             },
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VignettingMeasurements {
+    pub zones: VignettingZoneMeasurements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VignettingZoneMeasurements {
+    pub top_left: CornerFalloff,
+    pub top_right: CornerFalloff,
+    pub bottom_left: CornerFalloff,
+    pub bottom_right: CornerFalloff,
+}
+
+impl VignettingZoneMeasurements {
+    #[must_use]
+    pub const fn values(&self) -> VignettingCornerValues {
+        VignettingCornerValues {
+            top_left: self.top_left.falloff,
+            top_right: self.top_right.falloff,
+            bottom_left: self.bottom_left.falloff,
+            bottom_right: self.bottom_right.falloff,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct CornerFalloff {
+    pub falloff: VignettingNumericMeasurement,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct VignettingCornerValues {
+    pub top_left: VignettingNumericMeasurement,
+    pub top_right: VignettingNumericMeasurement,
+    pub bottom_left: VignettingNumericMeasurement,
+    pub bottom_right: VignettingNumericMeasurement,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VignettingEvidence {
+    pub method: VignettingMethod,
+    pub included_samples: usize,
+    pub excluded_samples: usize,
+    pub reference_f_number: Option<f32>,
+    pub raw_corner_mean_stops: Option<VignettingCornerValues>,
+    pub optical_delta_from_reference_stops: Option<VignettingCornerValues>,
+    pub blockers: Vec<VignettingBlocker>,
+    pub excluded: Vec<ExclusionCount>,
+    pub symmetry: VignettingSymmetry,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VignettingSymmetry {
+    pub status: VignettingSymmetryStatus,
+    pub blockers: Vec<VignettingBlocker>,
+}
+
+impl VignettingSymmetry {
+    #[must_use]
+    pub fn not_assessed() -> Self {
+        Self {
+            status: VignettingSymmetryStatus::NotAssessed,
+            blockers: vec![VignettingBlocker::SymmetryNotAssessed],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct VignettingNumericMeasurement {
+    pub value: f32,
+    pub unit: NumericUnit,
+    pub method: VignettingMethod,
+}
+
+impl VignettingNumericMeasurement {
+    #[must_use]
+    pub fn measured_stops(value: f32) -> Option<Self> {
+        Self::stops(value, VignettingMethod::MeasuredLuminanceRatio)
+    }
+
+    #[must_use]
+    pub fn stops(value: f32, method: VignettingMethod) -> Option<Self> {
+        value.is_finite().then_some(Self {
+            value,
+            unit: NumericUnit::Stops,
+            method,
         })
     }
 }
@@ -242,6 +346,8 @@ pub enum NumericUnit {
     Acutance,
     AcutanceDelta,
     Ratio,
+    LinearLuminance,
+    Stops,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -254,6 +360,30 @@ pub enum MeasurementMethod {
 #[serde(rename_all = "snake_case")]
 pub enum DecentringMethod {
     DerivedFromMeasuredAcutance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VignettingMethod {
+    MeasuredLuminanceRatio,
+    ReferenceRelativeApertureDifference,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VignettingBlocker {
+    InsufficientApertureSeries,
+    MissingLensFocalIdentity,
+    ControlledApertureSeriesNotAssessed,
+    UnknownCorrections,
+    SymmetryNotAssessed,
+    ReferenceAperture,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VignettingSymmetryStatus {
+    NotAssessed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -300,11 +430,13 @@ mod tests {
         AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, DecentringEvidence,
         DerivedNumericMeasurement, ExclusionCount, ExclusionReason, FrameMeasurement,
         LeftRightDecentring, Measurements, PairId, PairSummary, ReliabilityBlocker,
-        SharpnessMeasurements, SourceKind, ZoneMeasurement, ZoneMeasurements,
+        SharpnessMeasurements, SourceKind, VignettingBlocker, VignettingCornerValues,
+        VignettingEvidence, VignettingMeasurements, VignettingMethod, VignettingNumericMeasurement,
+        VignettingSymmetry, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
-        ZoneMeasurement::measured(acutance, contrast, eligible).unwrap()
+        ZoneMeasurement::measured(acutance, contrast, 0.8, eligible).unwrap()
     }
 
     fn zones(eligible: bool) -> ZoneMeasurements {
@@ -326,7 +458,49 @@ mod tests {
                 sharpness: SharpnessMeasurements {
                     zones: zones(eligible),
                 },
+                vignetting: VignettingMeasurements {
+                    zones: VignettingZoneMeasurements {
+                        top_left: corner(-1.0),
+                        top_right: corner(-0.8),
+                        bottom_left: corner(-0.9),
+                        bottom_right: corner(-0.7),
+                    },
+                },
             },
+        }
+    }
+
+    fn corner(value: f32) -> super::CornerFalloff {
+        super::CornerFalloff {
+            falloff: VignettingNumericMeasurement::measured_stops(value).expect("finite falloff"),
+        }
+    }
+
+    fn corner_values(value: f32) -> VignettingCornerValues {
+        VignettingCornerValues {
+            top_left: VignettingNumericMeasurement::measured_stops(value).expect("finite falloff"),
+            top_right: VignettingNumericMeasurement::measured_stops(value).expect("finite falloff"),
+            bottom_left: VignettingNumericMeasurement::measured_stops(value)
+                .expect("finite falloff"),
+            bottom_right: VignettingNumericMeasurement::measured_stops(value)
+                .expect("finite falloff"),
+        }
+    }
+
+    fn vignetting() -> VignettingEvidence {
+        VignettingEvidence {
+            method: VignettingMethod::MeasuredLuminanceRatio,
+            included_samples: 1,
+            excluded_samples: 0,
+            reference_f_number: None,
+            raw_corner_mean_stops: Some(corner_values(-0.85)),
+            optical_delta_from_reference_stops: None,
+            blockers: vec![
+                VignettingBlocker::InsufficientApertureSeries,
+                VignettingBlocker::SymmetryNotAssessed,
+            ],
+            excluded: vec![],
+            symmetry: VignettingSymmetry::not_assessed(),
         }
     }
 
@@ -405,6 +579,7 @@ mod tests {
                 focal_length_mm: Some(50.0),
                 f_number: Some(8.0),
                 decentring: two_sample_decentring(),
+                vignetting: vignetting(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -412,10 +587,17 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-decentring\","));
-        assert_eq!(value["schema_version"], "0.1-decentring");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-vignetting\","));
+        assert_eq!(value["schema_version"], "0.1-vignetting");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
+        assert_group_field_order(&json);
+        assert_decentring_json(&value);
+        assert_frame_measurement_json(&value);
+        assert_vignetting_json(&value);
+    }
+
+    fn assert_group_field_order(json: &str) {
         assert!(
             json.find("\"f_number\"")
                 .expect("group f_number is serialised")
@@ -427,9 +609,19 @@ mod tests {
             json.find("\"decentring\"")
                 .expect("group decentring is serialised")
                 < json
+                    .find("\"vignetting\"")
+                    .expect("group vignetting is serialised")
+        );
+        assert!(
+            json.find("\"vignetting\"")
+                .expect("group vignetting is serialised")
+                < json
                     .find("\"frames\"")
                     .expect("group frames are serialised")
         );
+    }
+
+    fn assert_decentring_json(value: &serde_json::Value) {
         assert_eq!(
             value["groups"][0]["decentring"]["method"],
             "derived_from_measured_acutance"
@@ -461,6 +653,9 @@ mod tests {
                 .len(),
             0
         );
+    }
+
+    fn assert_frame_measurement_json(value: &serde_json::Value) {
         assert_eq!(value["groups"][0]["frames"][0]["input_index"], 0);
         assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
@@ -473,6 +668,16 @@ mod tests {
             "ratio"
         );
         assert_eq!(
+            value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["luminance"]
+                ["unit"],
+            "linear_luminance"
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["measurements"]["vignetting"]["zones"]["top_left"]["falloff"]
+                ["unit"],
+            "stops"
+        );
+        assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["top_left"]["acutance"]
                 ["confidence"],
             0.0
@@ -481,6 +686,17 @@ mod tests {
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["texture_usable"]
                 ["method"],
             "derived_threshold"
+        );
+    }
+
+    fn assert_vignetting_json(value: &serde_json::Value) {
+        assert_eq!(
+            value["groups"][0]["vignetting"]["raw_corner_mean_stops"]["top_left"]["method"],
+            "measured_luminance_ratio"
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["status"],
+            "not_assessed"
         );
     }
 
@@ -525,6 +741,7 @@ mod tests {
                         None,
                     ),
                 ),
+                vignetting: vignetting(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -586,6 +803,20 @@ mod tests {
                         None,
                     ),
                 ),
+                vignetting: VignettingEvidence {
+                    included_samples: 0,
+                    excluded_samples: 1,
+                    raw_corner_mean_stops: None,
+                    blockers: vec![
+                        VignettingBlocker::UnknownCorrections,
+                        VignettingBlocker::SymmetryNotAssessed,
+                    ],
+                    excluded: vec![ExclusionCount {
+                        reason: ExclusionReason::UnknownCorrections,
+                        count: 1,
+                    }],
+                    ..vignetting()
+                },
                 frames: vec![frame(0, "a.tif", false)],
             }],
         );
@@ -630,10 +861,12 @@ mod tests {
 
     #[test]
     fn rejects_non_finite_numeric_measurements() {
-        assert!(ZoneMeasurement::measured(f32::NAN, 0.1, true).is_none());
-        assert!(ZoneMeasurement::measured(0.1, f32::INFINITY, true).is_none());
+        assert!(ZoneMeasurement::measured(f32::NAN, 0.1, 1.0, true).is_none());
+        assert!(ZoneMeasurement::measured(0.1, f32::INFINITY, 1.0, true).is_none());
+        assert!(ZoneMeasurement::measured(0.1, 0.1, f32::NAN, true).is_none());
         assert!(DerivedNumericMeasurement::acutance_delta(f32::NAN).is_none());
         assert!(DerivedNumericMeasurement::acutance_delta(f32::NEG_INFINITY).is_none());
+        assert!(VignettingNumericMeasurement::measured_stops(f32::NAN).is_none());
     }
 
     #[test]
@@ -647,6 +880,7 @@ mod tests {
                     focal_length_mm: None,
                     f_number: None,
                     decentring: two_sample_decentring(),
+                    vignetting: vignetting(),
                     frames: vec![frame(0, "first.tif", false), frame(2, "third.tif", false)],
                 },
                 AnalyseGroup {
@@ -654,6 +888,7 @@ mod tests {
                     focal_length_mm: None,
                     f_number: None,
                     decentring: two_sample_decentring(),
+                    vignetting: vignetting(),
                     frames: vec![frame(1, "second.tif", false)],
                 },
             ],

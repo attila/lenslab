@@ -26,6 +26,39 @@ fn write_gray_tiff(path: &Path, width: u32, height: u32, offset: u16) {
     image.write_data(&samples).expect("write gray TIFF data");
 }
 
+fn write_gray_vignetting_tiff(path: &Path) {
+    const WIDTH: u32 = 100;
+    const HEIGHT: u32 = 100;
+    let file = File::create(path).expect("create TIFF");
+    let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
+    let image = encoder
+        .new_image::<Gray16>(WIDTH, HEIGHT)
+        .expect("new gray TIFF");
+    let mut samples = vec![30_000_u16; WIDTH as usize * HEIGHT as usize];
+    paint_rect(&mut samples, WIDTH, 43, 43, 13, 13, 40_000);
+    paint_rect(&mut samples, WIDTH, 5, 5, 13, 13, 20_000);
+    paint_rect(&mut samples, WIDTH, 82, 5, 13, 13, 20_000);
+    paint_rect(&mut samples, WIDTH, 5, 82, 13, 13, 20_000);
+    paint_rect(&mut samples, WIDTH, 82, 82, 13, 13, 20_000);
+    image.write_data(&samples).expect("write gray TIFF data");
+}
+
+fn paint_rect(
+    samples: &mut [u16],
+    image_width: u32,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    value: u16,
+) {
+    for row in y..y + height {
+        for column in x..x + width {
+            samples[(row * image_width + column) as usize] = value;
+        }
+    }
+}
+
 fn write_rgb_tiff(path: &Path, width: u32, height: u32) {
     let file = File::create(path).expect("create TIFF");
     let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
@@ -65,12 +98,12 @@ fn assert_success_json(output: &Output) -> Value {
 fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let dir = TempDir::new().expect("tempdir");
     let input = dir.path().join("gray.tif");
-    write_gray_tiff(&input, 80, 60, 0);
+    write_gray_vignetting_tiff(&input);
 
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-decentring");
+    assert_eq!(json["schema_version"], "0.1-vignetting");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -94,6 +127,17 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
         "unknown_corrections"
     );
     assert_eq!(
+        json["groups"][0]["vignetting"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
+    assert!(
+        json["groups"][0]["vignetting"]["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "unknown_corrections")
+    );
+    assert_eq!(
         json["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
             ["method"],
         "measured"
@@ -103,6 +147,11 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
             ["method"],
         "derived_threshold"
     );
+    let frame_falloff = json["groups"][0]["frames"][0]["measurements"]["vignetting"]["zones"]
+        ["top_left"]["falloff"]["value"]
+        .as_f64()
+        .expect("falloff value");
+    assert!((frame_falloff + 1.0).abs() < 1.0e-6, "{frame_falloff}");
 }
 
 #[test]
@@ -238,7 +287,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-decentring");
+    assert_eq!(json["schema_version"], "0.1-vignetting");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -259,13 +308,25 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
         "decentred",
         "confidence",
         "artifacts",
-        "vignetting",
         "distortion",
         "ca_lateral",
+        "field_curvature",
         "mtf50",
     ] {
         assert!(json.get(key).is_none(), "{key}");
     }
+    assert!(
+        json["groups"][0]["vignetting"]
+            .as_object()
+            .expect("group vignetting")
+            .contains_key("raw_corner_mean_stops")
+    );
+    assert!(
+        json["groups"][0]["frames"][0]["measurements"]["vignetting"]
+            .as_object()
+            .expect("frame vignetting")
+            .contains_key("zones")
+    );
 }
 
 #[test]
@@ -298,6 +359,21 @@ fn analyse_unknown_tiff_correction_provenance_is_visible() {
     assert_eq!(
         json["groups"][0]["decentring"]["left_right"]["bottom_pair"]["excluded"][0]["reason"],
         "unknown_corrections"
+    );
+    assert_eq!(
+        json["groups"][0]["vignetting"]["optical_delta_from_reference_stops"],
+        Value::Null
+    );
+    assert_eq!(
+        json["groups"][0]["vignetting"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
+    assert!(
+        json["groups"][0]["frames"][0]["measurements"]["vignetting"]["zones"]["top_left"]
+            ["falloff"]["value"]
+            .as_f64()
+            .unwrap()
+            .is_finite()
     );
 }
 
