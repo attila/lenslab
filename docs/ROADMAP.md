@@ -13,15 +13,28 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Vignetting aperture-difference skeleton** — measure centre/corner luminance falloff from the
-  existing five-zone planes, report per-group evidence in JSON, and use aperture-difference
-  comparison where the group set supports it so fixed lighting or target gradients are not confused
-  with optical vignetting.
-  - _Depends on:_ decentring aggregation + first QA gate.
-  - _Done when:_ `analyse` reports measured falloff evidence without inferring optical vignetting
-    from uncontrolled scene-only data; unknown-correction inputs remain measurable for inspection
-    but excluded from optical aggregation; synthetic or real fixtures cover known falloff,
-    deterministic output, and stdout-empty failures.
+- **Lateral CA skeleton** — measure per-corner red/blue channel displacement from demosaiced patches
+  and report evidence without turning it into a lens verdict. Dependencies: existing
+  decode/image/zone pipeline, `analyse` grouping, and the vignetting-era schema pattern for
+  evidence-only metrics. _Done when:_ `lenslab analyse <paths…>` emits schema `0.1-ca` with measured
+  per-frame lateral CA evidence in px@fullres, group-level corner summaries and exclusion evidence
+  for unknown-correction inputs; synthetic tests cover a known injected channel shift; real fixture
+  tests keep Bayer success and X-Trans/corrected rejection behaviour intact.
+
+## Remaining v0.1 Measurement Backlog
+
+- **Distortion skeleton** — report measured or explicitly inferred straight-line bow evidence
+  without over-claiming edge distortion from weak references.
+- **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
+  preserving the distinction from measured focus-bracket curvature.
+- **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
+  gated target frames without promoting scene-only evidence to a copy verdict.
+- **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
+  into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
+  controlled.
+- **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
+  centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
+  narrative judgement in the plugin.
 
 ## In Progress
 
@@ -89,6 +102,14 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   assessed until real keystone estimation exists. It still emits no centred/decentred copy verdict.
   _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
   scene-only or ungated inference as a copy verdict — met by commit `2e43560`.
+- **Vignetting aperture-difference skeleton** — `lenslab analyse <paths…>` emits skeleton schema
+  `0.1-vignetting` with measured centre/corner luminance falloff, per-group raw falloff evidence,
+  unknown-correction exclusions, and reference-relative aperture-difference machinery blocked until
+  controlled aperture-series evidence exists. It still emits no optical verdict or radial symmetry
+  conclusion. _Done when:_ measured falloff evidence is reported without inferring optical
+  vignetting from uncontrolled scene-only data; unknown-correction inputs remain measurable for
+  inspection but excluded from optical aggregation; synthetic tests cover known falloff,
+  deterministic output, and stdout-empty failures — met by this change.
 
 ## Deferred / known gaps
 

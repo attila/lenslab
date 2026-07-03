@@ -184,7 +184,7 @@ mod tests {
     };
 
     fn zone(acutance: f32, contrast: f32) -> ZoneMeasurement {
-        ZoneMeasurement::measured(acutance, contrast, true).expect("finite zone")
+        ZoneMeasurement::measured(acutance, contrast, 1.0, true).expect("finite zone")
     }
 
     fn forced_zone(acutance: f32, texture_usable: bool) -> ZoneMeasurement {
@@ -198,6 +198,12 @@ mod tests {
             contrast: NumericMeasurement {
                 value: if texture_usable { 0.2 } else { 0.1 },
                 unit: NumericUnit::Ratio,
+                method: MeasurementMethod::Measured,
+                confidence: if texture_usable { 1.0 } else { 0.0 },
+            },
+            luminance: NumericMeasurement {
+                value: 1.0,
+                unit: NumericUnit::LinearLuminance,
                 method: MeasurementMethod::Measured,
                 confidence: if texture_usable { 1.0 } else { 0.0 },
             },
@@ -230,7 +236,22 @@ mod tests {
                         bottom_right,
                     },
                 },
+                vignetting: crate::schema::VignettingMeasurements {
+                    zones: crate::schema::VignettingZoneMeasurements {
+                        top_left: corner_falloff(-0.5),
+                        top_right: corner_falloff(-0.5),
+                        bottom_left: corner_falloff(-0.5),
+                        bottom_right: corner_falloff(-0.5),
+                    },
+                },
             },
+        }
+    }
+
+    fn corner_falloff(value: f32) -> crate::schema::CornerFalloff {
+        crate::schema::CornerFalloff {
+            falloff: crate::schema::VignettingNumericMeasurement::measured_stops(value)
+                .expect("finite falloff"),
         }
     }
 

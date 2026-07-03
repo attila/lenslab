@@ -5,9 +5,14 @@ use anyhow::{Context, bail};
 use lenslab_core::channels::{extract_green, extract_luma};
 use lenslab_core::metrics::acutance::measure_acutance;
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
+use lenslab_core::metrics::vignetting::{
+    aggregate_group_vignetting, apply_reference_relative_vignetting, measured_falloff,
+    median_luminance,
+};
 use lenslab_core::schema::{
     AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, FrameMeasurement, Measurements,
-    SharpnessMeasurements, SourceKind, ZoneMeasurement, ZoneMeasurements,
+    SharpnessMeasurements, SourceKind, VignettingMeasurements, VignettingZoneMeasurements,
+    ZoneMeasurement, ZoneMeasurements,
 };
 use lenslab_core::zones::{ZoneId, default_zones, project_zone};
 use lenslab_decode::{DecodedFrame, DecodedPixels, FrameInfo};
@@ -44,7 +49,10 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
                 path: path.display().to_string(),
                 aggregation_eligible,
                 measurements: Measurements {
-                    sharpness: SharpnessMeasurements { zones: zones.zones },
+                    sharpness: SharpnessMeasurements {
+                        zones: zones.sharpness_zones,
+                    },
+                    vignetting: zones.vignetting,
                 },
             },
         });
@@ -125,7 +133,8 @@ fn correction_provenance(info: &FrameInfo) -> String {
 
 struct MeasuredZones {
     info: FrameInfo,
-    zones: ZoneMeasurements,
+    sharpness_zones: ZoneMeasurements,
+    vignetting: VignettingMeasurements,
 }
 
 fn measure_frame_zones(
@@ -145,18 +154,25 @@ fn measure_frame_zones(
         let rect = project_zone(zone.rect(), plane.grid)?;
         let patch_view = plane.image.patch(rect)?;
         let measurement = measure_acutance(patch_view)?;
+        let luminance = median_luminance(patch_view)?;
         let zone_measurement = ZoneMeasurement::measured(
             measurement.acutance,
             measurement.contrast,
+            luminance,
             aggregation_eligible,
         )
         .with_context(|| format!("non-finite measurement in {}", path.display()))?;
         measured.push((zone_id_to_index(zone.id()), zone_measurement));
     }
+    let sharpness_zones = ordered_zone_measurements(measured)?;
+    let vignetting = VignettingMeasurements {
+        zones: vignetting_zones(&sharpness_zones)?,
+    };
 
     Ok(MeasuredZones {
         info,
-        zones: ordered_zone_measurements(measured)?,
+        sharpness_zones,
+        vignetting,
     })
 }
 
@@ -182,6 +198,16 @@ fn ordered_zone_measurements(
         .try_into()
         .map_err(|_| anyhow::anyhow!("expected five zone measurements"))?;
     Ok(ZoneMeasurements::from_ordered(zones))
+}
+
+fn vignetting_zones(zones: &ZoneMeasurements) -> anyhow::Result<VignettingZoneMeasurements> {
+    let centre_luminance = zones.centre.luminance.value;
+    Ok(VignettingZoneMeasurements {
+        top_left: measured_falloff(centre_luminance, zones.top_left.luminance.value)?,
+        top_right: measured_falloff(centre_luminance, zones.top_right.luminance.value)?,
+        bottom_left: measured_falloff(centre_luminance, zones.bottom_left.luminance.value)?,
+        bottom_right: measured_falloff(centre_luminance, zones.bottom_right.luminance.value)?,
+    })
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -226,14 +252,19 @@ fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>>
     for group in groups {
         let decentring = aggregate_left_right_decentring(&group.frames)
             .context("failed to aggregate decentring evidence")?;
+        let vignetting = aggregate_group_vignetting(&group.frames)
+            .context("failed to aggregate vignetting evidence")?;
         analyse_groups.push(AnalyseGroup {
             lens_model: group.key.lens_model,
             focal_length_mm: group.key.focal_length_mm,
             f_number: group.key.f_number,
             decentring,
+            vignetting,
             frames: group.frames,
         });
     }
+    apply_reference_relative_vignetting(&mut analyse_groups, false)
+        .context("failed to aggregate reference-relative vignetting evidence")?;
     Ok(analyse_groups)
 }
 
@@ -246,11 +277,13 @@ struct GroupedFrames {
 mod tests {
     use super::{AnalysedFrame, GroupKey, group_frames};
     use lenslab_core::schema::{
-        FrameMeasurement, Measurements, SharpnessMeasurements, ZoneMeasurement, ZoneMeasurements,
+        CornerFalloff, FrameMeasurement, Measurements, SharpnessMeasurements,
+        VignettingMeasurements, VignettingNumericMeasurement, VignettingZoneMeasurements,
+        ZoneMeasurement, ZoneMeasurements,
     };
 
     fn frame(input_index: usize) -> FrameMeasurement {
-        let zone = ZoneMeasurement::measured(1.0, 0.2, true).unwrap();
+        let zone = ZoneMeasurement::measured(1.0, 0.2, 1.0, true).unwrap();
         FrameMeasurement {
             input_index,
             path: format!("frame-{input_index}.tif"),
@@ -265,7 +298,21 @@ mod tests {
                         zone,
                     ]),
                 },
+                vignetting: VignettingMeasurements {
+                    zones: VignettingZoneMeasurements {
+                        top_left: falloff(-1.0),
+                        top_right: falloff(-1.0),
+                        bottom_left: falloff(-1.0),
+                        bottom_right: falloff(-1.0),
+                    },
+                },
             },
+        }
+    }
+
+    fn falloff(value: f32) -> CornerFalloff {
+        CornerFalloff {
+            falloff: VignettingNumericMeasurement::measured_stops(value).unwrap(),
         }
     }
 
@@ -300,6 +347,9 @@ mod tests {
         assert_eq!(groups[0].lens_model.as_deref(), Some("50mm"));
         assert_eq!(groups[0].frames[0].input_index, 0);
         assert_eq!(groups[0].frames[1].input_index, 2);
+        assert!(groups[0].vignetting.blockers.contains(
+            &lenslab_core::schema::VignettingBlocker::ControlledApertureSeriesNotAssessed
+        ));
         assert_eq!(groups[1].lens_model.as_deref(), Some("35mm"));
         assert_eq!(groups[1].frames[0].input_index, 1);
     }
