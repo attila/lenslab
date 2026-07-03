@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-distortion";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-distortion-ca-unsupported";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -436,29 +436,30 @@ impl ZoneMeasurement {
             return None;
         }
         let texture_usable = contrast >= TEXTURE_USABLE_THRESHOLD;
-        let confidence = if aggregation_eligible && texture_usable {
+        let sharpness_confidence = if aggregation_eligible && texture_usable {
             1.0
         } else {
             0.0
         };
+        let luminance_confidence = if aggregation_eligible { 1.0 } else { 0.0 };
         Some(Self {
             acutance: NumericMeasurement {
                 value: acutance,
                 unit: NumericUnit::Acutance,
                 method: MeasurementMethod::Measured,
-                confidence,
+                confidence: sharpness_confidence,
             },
             contrast: NumericMeasurement {
                 value: contrast,
                 unit: NumericUnit::Ratio,
                 method: MeasurementMethod::Measured,
-                confidence,
+                confidence: sharpness_confidence,
             },
             luminance: NumericMeasurement {
                 value: luminance,
                 unit: NumericUnit::LinearLuminance,
                 method: MeasurementMethod::Measured,
-                confidence,
+                confidence: luminance_confidence,
             },
             texture_usable: TextureUsable {
                 value: texture_usable,
@@ -669,6 +670,7 @@ pub enum CaBlocker {
     FlatProfile,
     CorrelationPeakNotFound,
     ProfileTooShort,
+    UnsupportedColourChannels,
     UnknownCorrections,
 }
 
@@ -727,6 +729,7 @@ pub enum ExclusionReason {
     LowContrast,
     LineDiscontinuous,
     FitResidualTooHigh,
+    UnsupportedColourChannels,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -942,8 +945,8 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-distortion\","));
-        assert_eq!(value["schema_version"], "0.1-distortion");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-distortion-ca-unsupported\","));
+        assert_eq!(value["schema_version"], "0.1-distortion-ca-unsupported");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_group_field_order(&json);
@@ -1049,6 +1052,11 @@ mod tests {
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["top_left"]["acutance"]
                 ["confidence"],
             0.0
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["top_left"]["luminance"]
+                ["confidence"],
+            1.0
         );
         assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["texture_usable"]

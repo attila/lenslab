@@ -5,7 +5,6 @@ use crate::image::LinearPatchView;
 
 const ZERO_SIGNAL_EPSILON: f32 = 1.0e-6;
 const MID_FREQ_EPSILON: f32 = 1.0e-6;
-const CONTRAST_DENOMINATOR_EPSILON: f32 = 1.0e-6;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AcutanceMeasurement {
@@ -70,7 +69,7 @@ pub fn measure_acutance(patch: LinearPatchView<'_>) -> Result<AcutanceMeasuremen
         population_std(&high) / mid_std
     };
     let mean = mean(&samples);
-    let contrast = sample_std / (mean + CONTRAST_DENOMINATOR_EPSILON);
+    let contrast = if mean <= 0.0 { 0.0 } else { sample_std / mean };
 
     Ok(AcutanceMeasurement { acutance, contrast })
 }
@@ -210,11 +209,35 @@ mod tests {
     }
 
     #[test]
-    fn contrast_is_population_std_over_guarded_mean() {
+    fn contrast_is_population_std_over_positive_mean() {
         let samples = vec![0.0, 1.0, 2.0, 3.0];
         let measured = measure(2, 2, samples);
 
-        assert_close(measured.1, 1.118_034 / 1.500_001);
+        assert_close(measured.1, 1.118_034 / 1.5);
+    }
+
+    #[test]
+    fn non_positive_mean_has_zero_contrast() {
+        let samples = vec![-0.5, 0.5, -0.5, 0.5];
+        let measured = measure(2, 2, samples);
+
+        assert_close(measured.1, 0.0);
+    }
+
+    #[test]
+    fn near_zero_negative_mean_has_finite_zero_contrast() {
+        let samples = vec![-0.000_002, 0.0, 0.0, -0.000_002];
+        let measured = measure(2, 2, samples);
+
+        assert_close(measured.1, 0.0);
+    }
+
+    #[test]
+    fn tiny_positive_mean_uses_std_over_mean() {
+        let samples = vec![0.0, 0.0, 0.0, 0.000_002];
+        let measured = measure(2, 2, samples);
+
+        assert_close(measured.1, 1.732_050_8);
     }
 
     #[test]
@@ -264,7 +287,7 @@ mod tests {
                     .map(|index| if index / 15 == index % 15 { 1.0 } else { 0.0 })
                     .collect(),
                 3.136_893_3,
-                3.741_601,
+                3.741_654,
             ),
         ];
 

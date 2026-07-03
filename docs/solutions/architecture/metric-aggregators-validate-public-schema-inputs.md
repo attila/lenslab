@@ -10,7 +10,8 @@ applies_when:
   - Adding core metrics that consume public schema DTOs
   - Deriving aggregate evidence from frame-level measurements
   - Treating excluded samples differently from included samples
-tags: [metrics, schema, validation, aggregation, decentring]
+  - Preserving frame-level blockers in group-level evidence
+tags: [metrics, schema, validation, aggregation, decentring, ca, blockers]
 ---
 
 # Metric aggregators validate public schema inputs
@@ -46,6 +47,11 @@ Tests should cover invalid values on included and excluded paths. A low-texture 
 aggregation-ineligible sample must not become a way to smuggle `NaN` or infinity through derived
 evidence.
 
+Keep blocker evidence and sample exclusion counts as separate concerns. An ineligible frame may need
+an `unknown_corrections` exclusion while still carrying a structural blocker such as
+`unsupported_colour_channels` into the group summary. Preserve the blocker so consumers know why a
+measurement is unavailable, but do not count one frame as two excluded samples.
+
 ## Why This Matters
 
 Exclusions describe why a valid sample did not contribute to an aggregate. They are not validation
@@ -73,6 +79,13 @@ The fix moved finite acutance validation before the exclusion gates and added te
 - included non-finite samples;
 - low-texture non-finite samples;
 - aggregation-ineligible non-finite samples.
+
+The lateral CA aggregation review added the sibling evidence-preservation case. A true Gray TIFF has
+no colour channels for CA measurement, so frame-level evidence carries
+`unsupported_colour_channels`. TIFF correction status is still unknown, so the same frame is also
+excluded from aggregation as `unknown_corrections`. The group summary must retain
+`unsupported_colour_channels` as a blocker without adding a second exclusion count for the same
+frame.
 
 ## Related
 
