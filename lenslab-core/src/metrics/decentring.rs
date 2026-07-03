@@ -178,9 +178,9 @@ fn sample_std(samples: &[f32]) -> Option<f32> {
 mod tests {
     use super::{DecentringError, aggregate_left_right_decentring};
     use crate::schema::{
-        ExclusionReason, FrameMeasurement, MeasurementMethod, Measurements, NumericMeasurement,
-        NumericUnit, SharpnessMeasurements, TextureMethod, TextureUsable, ZoneMeasurement,
-        ZoneMeasurements,
+        CaBlocker, CaLateralMeasurements, ExclusionReason, FrameMeasurement, MeasurementMethod,
+        Measurements, NumericMeasurement, NumericUnit, SharpnessMeasurements, TextureMethod,
+        TextureUsable, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32) -> ZoneMeasurement {
@@ -244,6 +244,7 @@ mod tests {
                         bottom_right: corner_falloff(-0.5),
                     },
                 },
+                ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
             },
         }
     }

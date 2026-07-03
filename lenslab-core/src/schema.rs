@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-vignetting";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-ca";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -48,6 +48,7 @@ pub struct AnalyseGroup {
     pub f_number: Option<f32>,
     pub decentring: DecentringEvidence,
     pub vignetting: VignettingEvidence,
+    pub ca_lateral: CaLateralEvidence,
     pub frames: Vec<FrameMeasurement>,
 }
 
@@ -138,6 +139,149 @@ pub struct FrameMeasurement {
 pub struct Measurements {
     pub sharpness: SharpnessMeasurements,
     pub vignetting: VignettingMeasurements,
+    pub ca_lateral: CaLateralMeasurements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaLateralMeasurements {
+    pub zones: CaZoneMeasurements,
+}
+
+impl CaLateralMeasurements {
+    #[must_use]
+    pub fn blocked_all(blocker: CaBlocker) -> Self {
+        Self {
+            zones: CaZoneMeasurements {
+                top_left: CaZoneEvidence::blocked(blocker),
+                top_right: CaZoneEvidence::blocked(blocker),
+                bottom_left: CaZoneEvidence::blocked(blocker),
+                bottom_right: CaZoneEvidence::blocked(blocker),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaLateralEvidence {
+    pub top_left: CaCornerSummary,
+    pub top_right: CaCornerSummary,
+    pub bottom_left: CaCornerSummary,
+    pub bottom_right: CaCornerSummary,
+}
+
+impl CaLateralEvidence {
+    #[must_use]
+    pub fn empty() -> Self {
+        Self {
+            top_left: CaCornerSummary::empty(),
+            top_right: CaCornerSummary::empty(),
+            bottom_left: CaCornerSummary::empty(),
+            bottom_right: CaCornerSummary::empty(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaCornerSummary {
+    pub included_samples: usize,
+    pub excluded_samples: usize,
+    pub mean_shift: Option<CaShift>,
+    pub scatter: Option<CaShift>,
+    pub blockers: Vec<CaBlocker>,
+    pub excluded: Vec<ExclusionCount>,
+}
+
+impl CaCornerSummary {
+    #[must_use]
+    pub fn empty() -> Self {
+        Self {
+            included_samples: 0,
+            excluded_samples: 0,
+            mean_shift: None,
+            scatter: None,
+            blockers: vec![CaBlocker::InsufficientSamples],
+            excluded: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaZoneMeasurements {
+    pub top_left: CaZoneEvidence,
+    pub top_right: CaZoneEvidence,
+    pub bottom_left: CaZoneEvidence,
+    pub bottom_right: CaZoneEvidence,
+}
+
+impl CaZoneMeasurements {
+    #[must_use]
+    pub const fn values(&self) -> CaCornerValues<'_> {
+        CaCornerValues {
+            top_left: &self.top_left,
+            top_right: &self.top_right,
+            bottom_left: &self.bottom_left,
+            bottom_right: &self.bottom_right,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CaCornerValues<'a> {
+    pub top_left: &'a CaZoneEvidence,
+    pub top_right: &'a CaZoneEvidence,
+    pub bottom_left: &'a CaZoneEvidence,
+    pub bottom_right: &'a CaZoneEvidence,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaZoneEvidence {
+    pub shift: Option<CaShift>,
+    pub blockers: Vec<CaBlocker>,
+}
+
+impl CaZoneEvidence {
+    #[must_use]
+    pub fn measured(shift: CaShift) -> Self {
+        Self {
+            shift: Some(shift),
+            blockers: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn blocked(blocker: CaBlocker) -> Self {
+        Self {
+            shift: None,
+            blockers: vec![blocker],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct CaShift {
+    pub x: CaMeasurement,
+    pub y: CaMeasurement,
+    pub magnitude: CaMeasurement,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct CaMeasurement {
+    pub value: f32,
+    pub unit: NumericUnit,
+    pub method: CaMethod,
+    pub confidence: f32,
+}
+
+impl CaMeasurement {
+    #[must_use]
+    pub fn measured_channel_correlation(value: f32) -> Option<Self> {
+        value.is_finite().then_some(Self {
+            value,
+            unit: NumericUnit::PxFullres,
+            method: CaMethod::MeasuredChannelCorrelation,
+            confidence: 1.0,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -347,6 +491,7 @@ pub enum NumericUnit {
     AcutanceDelta,
     Ratio,
     LinearLuminance,
+    PxFullres,
     Stops,
 }
 
@@ -367,6 +512,23 @@ pub enum DecentringMethod {
 pub enum VignettingMethod {
     MeasuredLuminanceRatio,
     ReferenceRelativeApertureDifference,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CaMethod {
+    MeasuredChannelCorrelation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CaBlocker {
+    InsufficientSamples,
+    LowTexture,
+    FlatProfile,
+    CorrelationPeakNotFound,
+    ProfileTooShort,
+    UnknownCorrections,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -416,6 +578,9 @@ pub enum ReliabilityBlocker {
 pub enum ExclusionReason {
     UnknownCorrections,
     LowTexture,
+    FlatProfile,
+    CorrelationPeakNotFound,
+    ProfileTooShort,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -427,12 +592,13 @@ pub enum TextureMethod {
 #[cfg(test)]
 mod tests {
     use super::{
-        AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, DecentringEvidence,
-        DerivedNumericMeasurement, ExclusionCount, ExclusionReason, FrameMeasurement,
-        LeftRightDecentring, Measurements, PairId, PairSummary, ReliabilityBlocker,
-        SharpnessMeasurements, SourceKind, VignettingBlocker, VignettingCornerValues,
-        VignettingEvidence, VignettingMeasurements, VignettingMethod, VignettingNumericMeasurement,
-        VignettingSymmetry, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralEvidence,
+        CaLateralMeasurements, CorrectionStatus, DecentringEvidence, DerivedNumericMeasurement,
+        ExclusionCount, ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements,
+        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind,
+        VignettingBlocker, VignettingCornerValues, VignettingEvidence, VignettingMeasurements,
+        VignettingMethod, VignettingNumericMeasurement, VignettingSymmetry,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
@@ -466,6 +632,7 @@ mod tests {
                         bottom_right: corner(-0.7),
                     },
                 },
+                ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
             },
         }
     }
@@ -580,6 +747,7 @@ mod tests {
                 f_number: Some(8.0),
                 decentring: two_sample_decentring(),
                 vignetting: vignetting(),
+                ca_lateral: CaLateralEvidence::empty(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -587,14 +755,15 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-vignetting\","));
-        assert_eq!(value["schema_version"], "0.1-vignetting");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-ca\","));
+        assert_eq!(value["schema_version"], "0.1-ca");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_group_field_order(&json);
         assert_decentring_json(&value);
         assert_frame_measurement_json(&value);
         assert_vignetting_json(&value);
+        assert_ca_json(&value);
     }
 
     fn assert_group_field_order(json: &str) {
@@ -615,6 +784,10 @@ mod tests {
         assert!(
             json.find("\"vignetting\"")
                 .expect("group vignetting is serialised")
+                < json.find("\"ca_lateral\"").expect("group CA is serialised")
+        );
+        assert!(
+            json.find("\"ca_lateral\"").expect("group CA is serialised")
                 < json
                     .find("\"frames\"")
                     .expect("group frames are serialised")
@@ -700,6 +873,22 @@ mod tests {
         );
     }
 
+    fn assert_ca_json(value: &serde_json::Value) {
+        assert_eq!(
+            value["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"]["top_left"]["blockers"]
+                [0],
+            "flat_profile"
+        );
+        assert_eq!(
+            value["groups"][0]["ca_lateral"]["top_left"]["blockers"][0],
+            "insufficient_samples"
+        );
+        assert_eq!(
+            value["groups"][0]["ca_lateral"]["top_left"]["mean_shift"],
+            serde_json::Value::Null
+        );
+    }
+
     #[test]
     fn serialises_no_future_verdict_or_artifact_fields() {
         let report = AnalyseReport::new("0.1.0", vec![], vec![]);
@@ -742,6 +931,7 @@ mod tests {
                     ),
                 ),
                 vignetting: vignetting(),
+                ca_lateral: CaLateralEvidence::empty(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -817,6 +1007,7 @@ mod tests {
                     }],
                     ..vignetting()
                 },
+                ca_lateral: CaLateralEvidence::empty(),
                 frames: vec![frame(0, "a.tif", false)],
             }],
         );
@@ -881,6 +1072,7 @@ mod tests {
                     f_number: None,
                     decentring: two_sample_decentring(),
                     vignetting: vignetting(),
+                    ca_lateral: CaLateralEvidence::empty(),
                     frames: vec![frame(0, "first.tif", false), frame(2, "third.tif", false)],
                 },
                 AnalyseGroup {
@@ -889,6 +1081,7 @@ mod tests {
                     f_number: None,
                     decentring: two_sample_decentring(),
                     vignetting: vignetting(),
+                    ca_lateral: CaLateralEvidence::empty(),
                     frames: vec![frame(1, "second.tif", false)],
                 },
             ],
