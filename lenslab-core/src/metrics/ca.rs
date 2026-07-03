@@ -540,6 +540,9 @@ mod tests {
                         bottom_right: evidence,
                     },
                 },
+                distortion: crate::schema::DistortionMeasurements::blocked(
+                    crate::schema::DistortionBlocker::NoStraightReference,
+                ),
             },
         }
     }

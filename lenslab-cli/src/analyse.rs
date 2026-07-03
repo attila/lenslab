@@ -6,15 +6,16 @@ use lenslab_core::channels::{ExtractedCaPlanes, extract_ca_planes, extract_green
 use lenslab_core::metrics::acutance::measure_acutance;
 use lenslab_core::metrics::ca::{aggregate_group_ca, measure_lateral_ca};
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
+use lenslab_core::metrics::distortion::{aggregate_group_distortion, measure_distortion};
 use lenslab_core::metrics::vignetting::{
     aggregate_group_vignetting, apply_reference_relative_vignetting, measured_falloff,
     median_luminance,
 };
 use lenslab_core::schema::{
     AnalyseGroup, AnalyseInput, AnalyseReport, CaLateralMeasurements, CaZoneEvidence,
-    CaZoneMeasurements, CorrectionStatus, FrameMeasurement, Measurements, SharpnessMeasurements,
-    SourceKind, VignettingMeasurements, VignettingZoneMeasurements, ZoneMeasurement,
-    ZoneMeasurements,
+    CaZoneMeasurements, CorrectionStatus, DistortionMeasurements, FrameMeasurement, Measurements,
+    SharpnessMeasurements, SourceKind, VignettingMeasurements, VignettingZoneMeasurements,
+    ZoneMeasurement, ZoneMeasurements,
 };
 use lenslab_core::zones::{ZoneId, default_zones, project_zone};
 use lenslab_decode::{DecodedFrame, DecodedPixels, FrameInfo};
@@ -56,6 +57,7 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
                     },
                     vignetting: zones.vignetting,
                     ca_lateral: zones.ca_lateral,
+                    distortion: zones.distortion,
                 },
             },
         });
@@ -139,6 +141,7 @@ struct MeasuredZones {
     sharpness_zones: ZoneMeasurements,
     vignetting: VignettingMeasurements,
     ca_lateral: CaLateralMeasurements,
+    distortion: DistortionMeasurements,
 }
 
 fn measure_frame_zones(
@@ -193,12 +196,21 @@ fn measure_frame_zones(
     let ca_lateral = CaLateralMeasurements {
         zones: ordered_ca_zone_measurements(ca_measured)?,
     };
+    let full_plane = plane.image.patch(lenslab_core::image::Rect::new(
+        0,
+        0,
+        plane.image.dimensions().width(),
+        plane.image.dimensions().height(),
+    )?)?;
+    let distortion = measure_distortion(full_plane)
+        .with_context(|| format!("failed to measure distortion in {}", path.display()))?;
 
     Ok(MeasuredZones {
         info,
         sharpness_zones,
         vignetting,
         ca_lateral,
+        distortion,
     })
 }
 
@@ -313,6 +325,8 @@ fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>>
             .context("failed to aggregate vignetting evidence")?;
         let ca_lateral =
             aggregate_group_ca(&group.frames).context("failed to aggregate lateral CA evidence")?;
+        let distortion = aggregate_group_distortion(&group.frames)
+            .context("failed to aggregate distortion evidence")?;
         analyse_groups.push(AnalyseGroup {
             lens_model: group.key.lens_model,
             focal_length_mm: group.key.focal_length_mm,
@@ -320,6 +334,7 @@ fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>>
             decentring,
             vignetting,
             ca_lateral,
+            distortion,
             frames: group.frames,
         });
     }
@@ -367,6 +382,9 @@ mod tests {
                     },
                 },
                 ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
+                distortion: lenslab_core::schema::DistortionMeasurements::blocked(
+                    lenslab_core::schema::DistortionBlocker::NoStraightReference,
+                ),
             },
         }
     }

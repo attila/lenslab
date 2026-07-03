@@ -13,19 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Distortion skeleton** — report measured or explicitly inferred straight-line bow evidence
-  without over-claiming edge distortion from weak references. Dependencies: existing
-  decode/image/zone pipeline, `analyse` grouping, and the evidence-only schema pattern. _Done when:_
-  `lenslab analyse <paths…>` emits deterministic distortion evidence with explicit measured/inferred
-  status, blockers for unsupported target geometry, and no lens-copy verdict; synthetic tests cover
-  a known straight-line bow case and weak-reference blockers.
+- **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
+  preserving the distinction from measured focus-bracket curvature.
 
 ## Remaining v0.1 Measurement Backlog
 
-- **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
-  preserving the distinction from measured focus-bracket curvature.
 - **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
-  gated target frames without promoting scene-only evidence to a copy verdict.
+  gated target frames without promoting scene-only evidence to a copy verdict. This should define
+  reusable target-geometry primitives for later calibrated distortion/checkerboard work, not just a
+  one-off QA flag.
 - **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
   into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
   controlled.
@@ -114,6 +110,14 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   cover a known injected channel shift, zero shift, flat-profile blockers, deterministic output, and
   unknown-correction exclusion; real fixture tests keep Bayer success and X-Trans/corrected
   rejection behaviour intact — met by commit `7f49d6b`.
+- **Distortion skeleton** — `lenslab analyse <paths…>` emits skeleton schema `0.1-distortion` with
+  frame-level straight-line bow candidates, measured/inferred method codes, blocker evidence for
+  unsupported geometry, and group summaries that exclude weak references and unknown-correction
+  frames from optical aggregation. It still emits no lens-copy verdict, calibrated edge distortion,
+  checkerboard calibration, field-curvature, MTF50, artefacts, or plugin interpretation. _Done
+  when:_ synthetic tests cover known straight-line bow, weak-reference inference, no-reference
+  blockers, deterministic output, and stdout-empty failures; real fixture tests keep Bayer success
+  and X-Trans/corrected rejection behaviour intact — met by this change.
 
 ## Deferred / known gaps
 
@@ -157,6 +161,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   locality worse than centralised reading. _Done when:_ serde output remains byte-stable for
   existing fixtures, schema versioning stays central, and new measurement families can add DTOs
   without editing an oversized catch-all module.
+- **Calibrated distortion model** — fit a lens distortion model only after target geometry and pose
+  are measurable; depends on the Target QA / keystone gate producing reusable chart geometry
+  evidence, so scene-only straight-line bow evidence is not mistaken for calibrated optical
+  distortion. _Done when:_ checkerboard or equivalent controlled-target inputs produce a fitted
+  distortion model with residuals and confidence gates, while uncontrolled scenes remain blocked or
+  reported as non-calibrated evidence.
 - **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
   deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
   `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
