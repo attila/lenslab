@@ -111,6 +111,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   command-wide taxonomy first (usage/config error, unsupported input, decode failure, render/output
   failure, internal bug), then implement typed error mapping across existing commands instead of
   changing `contact` alone.
+- **`analyse` large-batch performance is unmeasured** — review surfaced plausible optimisation
+  points: grouping currently scans accumulated groups, and acutance materialises full-patch diff
+  buffers. These are not known bottlenecks for the explicit-file skeleton, so do not rewrite them
+  speculatively. Revisit if a real batch, benchmark, or repeated review finding shows measurable
+  time or memory cost. _Done when:_ a benchmark identifies a concrete bottleneck and the fix is
+  measured, or confirms the simple implementation is adequate.
 - **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
   deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
   `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
