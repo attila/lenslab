@@ -19,7 +19,9 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 ## Remaining v0.1 Measurement Backlog
 
 - **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
-  gated target frames without promoting scene-only evidence to a copy verdict.
+  gated target frames without promoting scene-only evidence to a copy verdict. This should define
+  reusable target-geometry primitives for later calibrated distortion/checkerboard work, not just a
+  one-off QA flag.
 - **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
   into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
   controlled.
@@ -159,6 +161,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   locality worse than centralised reading. _Done when:_ serde output remains byte-stable for
   existing fixtures, schema versioning stays central, and new measurement families can add DTOs
   without editing an oversized catch-all module.
+- **Calibrated distortion model** — fit a lens distortion model only after target geometry and pose
+  are measurable; depends on the Target QA / keystone gate producing reusable chart geometry
+  evidence, so scene-only straight-line bow evidence is not mistaken for calibrated optical
+  distortion. _Done when:_ checkerboard or equivalent controlled-target inputs produce a fitted
+  distortion model with residuals and confidence gates, while uncontrolled scenes remain blocked or
+  reported as non-calibrated evidence.
 - **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
   deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
   `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
