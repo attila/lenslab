@@ -13,18 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Lateral CA skeleton** — measure per-corner red/blue channel displacement from demosaiced patches
-  and report evidence without turning it into a lens verdict. Dependencies: existing
-  decode/image/zone pipeline, `analyse` grouping, and the vignetting-era schema pattern for
-  evidence-only metrics. _Done when:_ `lenslab analyse <paths…>` emits schema `0.1-ca` with measured
-  per-frame lateral CA evidence in px@fullres, group-level corner summaries and exclusion evidence
-  for unknown-correction inputs; synthetic tests cover a known injected channel shift; real fixture
-  tests keep Bayer success and X-Trans/corrected rejection behaviour intact.
+- **Distortion skeleton** — report measured or explicitly inferred straight-line bow evidence
+  without over-claiming edge distortion from weak references. Dependencies: existing
+  decode/image/zone pipeline, `analyse` grouping, and the evidence-only schema pattern. _Done when:_
+  `lenslab analyse <paths…>` emits deterministic distortion evidence with explicit measured/inferred
+  status, blockers for unsupported target geometry, and no lens-copy verdict; synthetic tests cover
+  a known straight-line bow case and weak-reference blockers.
 
 ## Remaining v0.1 Measurement Backlog
 
-- **Distortion skeleton** — report measured or explicitly inferred straight-line bow evidence
-  without over-claiming edge distortion from weak references.
 - **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
   preserving the distinction from measured focus-bracket curvature.
 - **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
@@ -110,6 +107,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   vignetting from uncontrolled scene-only data; unknown-correction inputs remain measurable for
   inspection but excluded from optical aggregation; synthetic tests cover known falloff,
   deterministic output, and stdout-empty failures — met by this change.
+- **Lateral CA skeleton** — `lenslab analyse <paths…>` emits skeleton schema `0.1-ca` with measured
+  per-frame red/blue lateral CA evidence in px@fullres, per-corner group summaries, blockers, and
+  unknown-correction exclusions. It still emits no lens-copy verdict, LoCA, distortion,
+  field-curvature, MTF50, artefacts, or plugin interpretation. _Done when:_ synthetic RGB tests
+  cover a known injected channel shift, zero shift, flat-profile blockers, deterministic output, and
+  unknown-correction exclusion; real fixture tests keep Bayer success and X-Trans/corrected
+  rejection behaviour intact — met by commit `7f49d6b`.
 
 ## Deferred / known gaps
 
