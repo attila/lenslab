@@ -92,9 +92,9 @@ lenslab/
 2. Image model + single-green-plane extraction + zone geometry
    (`docs/ALGORITHMS.md §Channel, §Zones`).
 3. `contact` (contact sheet) — cheap, validates demosaic + I/O.
-4. Acutance metric + `analyse` skeleton emitting JSON. **Current implementation reaches this
-   acutance/contrast skeleton only; no verdict is emitted.**
-5. Decentring aggregate + QA keystone gate.
+4. Acutance metric + `analyse` skeleton emitting JSON.
+5. Decentring aggregate + first QA gate. **Current implementation reaches evidence-only left/right
+   decentring aggregation with QA exclusions; no copy verdict or keystone estimate is emitted.**
 6. Vignetting (aperture-difference method). CA. Distortion. Field-curvature inference.
 7. Slanted-edge MTF50 for target shots (heaviest; acutance is the fallback and already works).
 8. Synthetic fixtures with injected MTF/vignette/distortion → assert measured values within

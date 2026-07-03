@@ -70,13 +70,29 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-acutance");
+    assert_eq!(json["schema_version"], "0.1-decentring");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
         "accepted_unknown_corrections"
     );
     assert_eq!(json["groups"][0]["frames"][0]["input_index"], 0);
+    assert_eq!(
+        json["groups"][0]["decentring"]["target_quality"]["status"],
+        "not_assessed"
+    );
+    assert_eq!(
+        json["groups"][0]["decentring"]["target_quality"]["blockers"][0],
+        "keystone_not_assessed"
+    );
+    assert_eq!(
+        json["groups"][0]["decentring"]["left_right"]["top_pair"]["included_samples"],
+        0
+    );
+    assert_eq!(
+        json["groups"][0]["decentring"]["left_right"]["top_pair"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
     assert_eq!(
         json["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
             ["method"],
@@ -222,7 +238,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-acutance");
+    assert_eq!(json["schema_version"], "0.1-decentring");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -238,6 +254,10 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
     for key in [
         "generated_utc",
         "verdict",
+        "copy",
+        "centred",
+        "decentred",
+        "confidence",
         "artifacts",
         "vignetting",
         "distortion",
@@ -271,6 +291,14 @@ fn analyse_unknown_tiff_correction_provenance_is_visible() {
         json["groups"][0]["frames"][0]["aggregation_eligible"],
         false
     );
+    assert_eq!(
+        json["groups"][0]["decentring"]["left_right"]["bottom_pair"]["included_samples"],
+        0
+    );
+    assert_eq!(
+        json["groups"][0]["decentring"]["left_right"]["bottom_pair"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
 }
 
 #[cfg(feature = "real-fixtures")]
@@ -295,6 +323,32 @@ fn analyse_measures_real_bayer_dng_fixture() {
     assert_eq!(json["inputs"][0]["source_kind"], "cfa");
     assert_eq!(json["inputs"][0]["corrections"], "confirmed_uncorrected");
     assert_eq!(json["groups"][0]["frames"][0]["aggregation_eligible"], true);
+    let zones = &json["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"];
+    let top_pair = &json["groups"][0]["decentring"]["left_right"]["top_pair"];
+    let bottom_pair = &json["groups"][0]["decentring"]["left_right"]["bottom_pair"];
+
+    assert_eq!(top_pair["id"], "top_left_minus_top_right");
+    assert_eq!(top_pair["included_samples"], 1);
+    assert_eq!(top_pair["excluded_samples"], 0);
+    assert_eq!(top_pair["scatter"], Value::Null);
+    assert_eq!(top_pair["reliability_blockers"][0], "insufficient_samples");
+    assert!(top_pair["excluded"].as_array().unwrap().is_empty());
+    let top_delta = zones["top_left"]["acutance"]["value"].as_f64().unwrap()
+        - zones["top_right"]["acutance"]["value"].as_f64().unwrap();
+    assert!((top_pair["mean_delta"]["value"].as_f64().unwrap() - top_delta).abs() < 1.0e-6);
+
+    assert_eq!(bottom_pair["id"], "bottom_left_minus_bottom_right");
+    assert_eq!(bottom_pair["included_samples"], 1);
+    assert_eq!(bottom_pair["excluded_samples"], 0);
+    assert_eq!(bottom_pair["scatter"], Value::Null);
+    assert_eq!(
+        bottom_pair["reliability_blockers"][0],
+        "insufficient_samples"
+    );
+    assert!(bottom_pair["excluded"].as_array().unwrap().is_empty());
+    let bottom_delta = zones["bottom_left"]["acutance"]["value"].as_f64().unwrap()
+        - zones["bottom_right"]["acutance"]["value"].as_f64().unwrap();
+    assert!((bottom_pair["mean_delta"]["value"].as_f64().unwrap() - bottom_delta).abs() < 1.0e-6);
 }
 
 #[cfg(feature = "real-fixtures")]

@@ -13,12 +13,7 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Decentring aggregation + first QA gate** — consume the acutance/contrast skeleton output,
-  compare zone symmetry across frames, and add the first target-quality gate before any copy verdict
-  is emitted.
-  - _Depends on:_ `analyse` acutance/contrast skeleton.
-  - _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
-    scene-only or ungated inference as a copy verdict.
+- _(none yet)_
 
 ## In Progress
 
@@ -80,6 +75,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   lens-copy verdict, QA result, artefacts, vignetting, CA, distortion, field curvature, or MTF50.
   _Done when:_ synthetic TIFF and real-fixture tests cover stdout/stderr separation, byte-stable
   output, Bayer DNG measurement, TIFF unknown-correction provenance, and corrected-input rejection.
+- **Decentring aggregation + first QA gate** — `lenslab analyse <paths…>` emits skeleton schema
+  `0.1-decentring` with group-level left/right corner-pair evidence derived from measured acutance,
+  pair-local exclusions for unknown corrections and low texture, and target quality marked as not
+  assessed until real keystone estimation exists. It still emits no centred/decentred copy verdict.
+  _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
+  scene-only or ungated inference as a copy verdict — met by this change.
 
 ## Deferred / known gaps
 

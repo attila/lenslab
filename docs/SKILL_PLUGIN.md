@@ -5,9 +5,9 @@ its JSON** — it does not measure anything itself. Keep it thin; all determinis
 (see DECISIONS D6).
 
 Current implementation note: this document describes the target coaching and verdict flow. The Rust
-CLI currently ships only explicit-file JSON acutance/contrast output for `analyse`; folder-based
-coaching, Markdown/HTML output, artefacts, QA gates, and copy verdict interpretation remain future
-plugin work.
+CLI currently ships explicit-file JSON acutance/contrast output plus evidence-only left/right
+decentring aggregation and QA exclusions for `analyse`; folder-based coaching, Markdown/HTML output,
+artefacts, real keystone gates, and copy verdict interpretation remain future plugin work.
 
 ## Layout
 
