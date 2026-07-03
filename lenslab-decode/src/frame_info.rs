@@ -29,7 +29,7 @@ pub struct Corrections {
 
 /// EXIF dump, decode info, and corrections-present flag for one frame — the output of `lenslab
 /// inspect`, a diagnostic command outside the versioned `analyse` JSON contract (`docs/SPEC.md`
-/// §6). No pixel data — that is the job of the (future) `lenslab-core` image model.
+/// §6). Pixel data is returned by [`crate::Decoder::decode`] through the `lenslab-core` image model.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct FrameInfo {
     pub source_kind: SourceKind,

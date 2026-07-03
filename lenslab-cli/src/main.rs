@@ -3,6 +3,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod analyse;
 mod contact;
 
 #[derive(Parser)]
@@ -18,6 +19,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Measure acutance and contrast from DNG/TIFF frames.
+    Analyse {
+        /// DNG or TIFF frames to measure, in input order.
+        #[arg(required = true, num_args = 1..)]
+        paths: Vec<PathBuf>,
+    },
+
     /// Render a labelled PNG contact sheet from DNG/TIFF frames.
     Contact {
         /// DNG or TIFF frames to include, in contact-sheet order.
@@ -48,6 +56,7 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
+        Command::Analyse { paths } => analyse::write_analysis(&paths),
         Command::Contact { paths, out } => contact::write_contact_sheet(&paths, &out),
         Command::Inspect { file } => inspect(&file),
     }

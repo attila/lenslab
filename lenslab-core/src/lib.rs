@@ -1,5 +1,7 @@
 pub mod channels;
 pub mod image;
+pub mod metrics;
+pub mod schema;
 pub mod zones;
 
 #[cfg(test)]

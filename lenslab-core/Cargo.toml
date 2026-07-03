@@ -12,3 +12,7 @@ description = "lenslab measurement and analysis library"
 workspace = true
 
 [dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

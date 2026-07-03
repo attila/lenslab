@@ -33,6 +33,9 @@ allow = [
 ]
 
 [bans]
+# rawler's transitive and build-dependency graph currently pulls duplicate versions of a few
+# build-support crates. Keep this as a warning so CI reports drift without blocking measurement
+# work on upstream dependency unification.
 multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true

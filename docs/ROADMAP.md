@@ -13,13 +13,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Acutance metric + `analyse` skeleton** — add the first machine-readable measurement path:
-  consume decoded frames, measure per-zone relative acutance on the existing green/luma planes, and
-  emit the initial canonical JSON shape without adding verdict synthesis or extra metrics.
-  - _Depends on:_ Image model + zone geometry; decode pixel path.
-  - _Done when:_ `lenslab analyse <paths…>` emits deterministic JSON with measured per-zone acutance
-    values for synthetic inputs, keeps diagnostics off stdout, and preserves the
-    measured-vs-inferred split.
+- **Decentring aggregation + first QA gate** — consume the acutance/contrast skeleton output,
+  compare zone symmetry across frames, and add the first target-quality gate before any copy verdict
+  is emitted.
+  - _Depends on:_ `analyse` acutance/contrast skeleton.
+  - _Done when:_ decentring signals and QA exclusions are represented in JSON without presenting a
+    scene-only or ungated inference as a copy verdict.
 
 ## In Progress
 
@@ -74,6 +73,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   real-fixture gate covers both Bayer success and X-Trans failure. _Done when:_ synthetic TIFF and
   real-fixture tests cover deterministic PNG creation, labels, output safety, and stdout/stderr
   separation — met by PR #7.
+- **Acutance metric + `analyse` skeleton** — `lenslab analyse <paths…>` accepts explicit DNG/TIFF
+  files, rejects known-corrected inputs, measures acutance and contrast across the default five
+  zones, and emits deterministic pretty JSON using skeleton schema `0.1-acutance`. The JSON records
+  correction provenance, texture usability, and aggregation eligibility; it deliberately emits no
+  lens-copy verdict, QA result, artefacts, vignetting, CA, distortion, field curvature, or MTF50.
+  _Done when:_ synthetic TIFF and real-fixture tests cover stdout/stderr separation, byte-stable
+  output, Bayer DNG measurement, TIFF unknown-correction provenance, and corrected-input rejection.
 
 ## Deferred / known gaps
 

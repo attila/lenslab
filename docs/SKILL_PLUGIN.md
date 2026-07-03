@@ -4,6 +4,11 @@ The plugin is the conversational front end. It **orchestrates the `lenslab` bina
 its JSON** — it does not measure anything itself. Keep it thin; all determinism lives in the CLI
 (see DECISIONS D6).
 
+Current implementation note: this document describes the target coaching and verdict flow. The Rust
+CLI currently ships only explicit-file JSON acutance/contrast output for `analyse`; folder-based
+coaching, Markdown/HTML output, artefacts, QA gates, and copy verdict interpretation remain future
+plugin work.
+
 ## Layout
 
 ```

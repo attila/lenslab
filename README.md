@@ -8,7 +8,8 @@ _measured_ and _inferred_.
 A Rust CLI for deterministic measurement (canonical JSON output) and a Claude plugin that coaches
 the test shots and turns the numbers into a verdict.
 
-> **Status: pre-implementation.** This repo currently holds the design and a validated prototype.
+> **Status:** The Rust workspace now has `inspect`, `contact`, the image model/zones, real DNG
+> fixtures, and an `analyse` acutance/contrast skeleton. Full verdict analysis remains future work.
 > Start at [`GENESIS.md`](docs/GENESIS.md).
 
 ## Why
@@ -21,8 +22,9 @@ distortion).
 
 ## Components
 
-- **`lenslab` CLI** (Rust, single static binary) — decode → normalise → measure → emit JSON + visual
-  artifacts. Deterministic and scriptable (meaningful exit codes).
+- **`lenslab` CLI** (Rust, single static binary) — current commands are `inspect`, `contact`, and an
+  explicit-file `analyse` skeleton that emits deterministic JSON acutance/contrast measurements. The
+  full metric battery, verdicts, artefacts, and exit-code taxonomy remain target work.
 - **Claude plugin** — orchestrates the binary, coaches square-on target shots and the aperture
   ladder, interprets the JSON into a keep/return brief.
 
