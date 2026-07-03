@@ -93,6 +93,8 @@ struct CornerAccumulator {
     flat_profile: usize,
     correlation_peak_not_found: usize,
     profile_too_short: usize,
+    unsupported_colour_channel_blockers: usize,
+    unsupported_colour_channels: usize,
     low_texture: usize,
 }
 
@@ -113,17 +115,24 @@ impl CornerAccumulator {
         }
         if !aggregation_eligible {
             self.unknown_corrections += 1;
-            return Ok(());
         }
 
         for blocker in &evidence.blockers {
-            match blocker {
-                CaBlocker::UnknownCorrections => self.unknown_corrections += 1,
-                CaBlocker::LowTexture => self.low_texture += 1,
-                CaBlocker::FlatProfile => self.flat_profile += 1,
-                CaBlocker::CorrelationPeakNotFound => self.correlation_peak_not_found += 1,
-                CaBlocker::ProfileTooShort => self.profile_too_short += 1,
-                CaBlocker::InsufficientSamples => {}
+            if aggregation_eligible {
+                match blocker {
+                    CaBlocker::UnknownCorrections => self.unknown_corrections += 1,
+                    CaBlocker::LowTexture => self.low_texture += 1,
+                    CaBlocker::FlatProfile => self.flat_profile += 1,
+                    CaBlocker::CorrelationPeakNotFound => self.correlation_peak_not_found += 1,
+                    CaBlocker::ProfileTooShort => self.profile_too_short += 1,
+                    CaBlocker::UnsupportedColourChannels => {
+                        self.unsupported_colour_channel_blockers += 1;
+                        self.unsupported_colour_channels += 1;
+                    }
+                    CaBlocker::InsufficientSamples => {}
+                }
+            } else if *blocker == CaBlocker::UnsupportedColourChannels {
+                self.unsupported_colour_channel_blockers += 1;
             }
         }
         Ok(())
@@ -153,6 +162,11 @@ impl CornerAccumulator {
             ExclusionReason::ProfileTooShort,
             self.profile_too_short,
         );
+        push_exclusion(
+            &mut excluded,
+            ExclusionReason::UnsupportedColourChannels,
+            self.unsupported_colour_channels,
+        );
         let excluded_samples = excluded.iter().map(|count| count.count).sum();
         let mut blockers = Vec::new();
         if included_samples < 2 {
@@ -172,6 +186,9 @@ impl CornerAccumulator {
         }
         if self.profile_too_short > 0 {
             blockers.push(CaBlocker::ProfileTooShort);
+        }
+        if self.unsupported_colour_channel_blockers > 0 {
+            blockers.push(CaBlocker::UnsupportedColourChannels);
         }
 
         Ok(CaCornerSummary {
@@ -206,16 +223,9 @@ fn mean_shift(shifts: &[CaShift]) -> Result<Option<CaShift>, CaError> {
     }
     #[allow(clippy::cast_precision_loss)]
     let len = shifts.len() as f32;
-    shift_from_values(
-        shifts.iter().map(|shift| shift.x.value).sum::<f32>() / len,
-        shifts.iter().map(|shift| shift.y.value).sum::<f32>() / len,
-        shifts
-            .iter()
-            .map(|shift| shift.magnitude.value)
-            .sum::<f32>()
-            / len,
-    )
-    .map(Some)
+    let x = shifts.iter().map(|shift| shift.x.value).sum::<f32>() / len;
+    let y = shifts.iter().map(|shift| shift.y.value).sum::<f32>() / len;
+    shift_from_values(x, y, x.hypot(y)).map(Some)
 }
 
 fn sample_std_shift(shifts: &[CaShift]) -> Result<Option<CaShift>, CaError> {
@@ -236,12 +246,9 @@ fn sample_std_shift(shifts: &[CaShift]) -> Result<Option<CaShift>, CaError> {
             / denominator)
             .sqrt()
     };
-    shift_from_values(
-        std(|shift| shift.x.value, mean.x.value),
-        std(|shift| shift.y.value, mean.y.value),
-        std(|shift| shift.magnitude.value, mean.magnitude.value),
-    )
-    .map(Some)
+    let x = std(|shift| shift.x.value, mean.x.value);
+    let y = std(|shift| shift.y.value, mean.y.value);
+    shift_from_values(x, y, x.hypot(y)).map(Some)
 }
 
 fn shift_from_values(x: f32, y: f32, magnitude: f32) -> Result<CaShift, CaError> {
@@ -673,8 +680,50 @@ mod tests {
             std::f32::consts::SQRT_2,
             1.0e-6,
         );
+        assert_close(
+            evidence.top_left.scatter.unwrap().magnitude.value,
+            std::f32::consts::SQRT_2,
+            1.0e-6,
+        );
         assert!(evidence.top_left.blockers.is_empty());
         assert!(evidence.top_left.excluded.is_empty());
+    }
+
+    #[test]
+    fn aggregate_group_ca_mean_magnitude_matches_mean_vector() {
+        let evidence = aggregate_group_ca(&[
+            ca_frame(true, CaZoneEvidence::measured(ca_shift(1.0, 0.0, 1.0))),
+            ca_frame(true, CaZoneEvidence::measured(ca_shift(-1.0, 0.0, 1.0))),
+        ])
+        .expect("aggregate");
+
+        let mean = evidence.top_left.mean_shift.expect("mean shift");
+        assert_close(mean.x.value, 0.0, 1.0e-6);
+        assert_close(mean.y.value, 0.0, 1.0e-6);
+        assert_close(mean.magnitude.value, 0.0, 1.0e-6);
+    }
+
+    #[test]
+    fn aggregate_group_ca_excludes_unsupported_colour_channels() {
+        let evidence = aggregate_group_ca(&[ca_frame(
+            true,
+            CaZoneEvidence::blocked(CaBlocker::UnsupportedColourChannels),
+        )])
+        .expect("aggregate");
+
+        assert_eq!(evidence.top_left.included_samples, 0);
+        assert_eq!(evidence.top_left.excluded_samples, 1);
+        assert_eq!(
+            evidence.top_left.excluded[0].reason,
+            ExclusionReason::UnsupportedColourChannels
+        );
+        assert_eq!(
+            evidence.top_left.blockers,
+            vec![
+                CaBlocker::InsufficientSamples,
+                CaBlocker::UnsupportedColourChannels
+            ]
+        );
     }
 
     #[test]

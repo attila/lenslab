@@ -12,7 +12,7 @@ use lenslab_core::metrics::vignetting::{
     median_luminance,
 };
 use lenslab_core::schema::{
-    AnalyseGroup, AnalyseInput, AnalyseReport, CaLateralMeasurements, CaZoneEvidence,
+    AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralMeasurements, CaZoneEvidence,
     CaZoneMeasurements, CorrectionStatus, DistortionMeasurements, FrameMeasurement, Measurements,
     SharpnessMeasurements, SourceKind, VignettingMeasurements, VignettingZoneMeasurements,
     ZoneMeasurement, ZoneMeasurements,
@@ -154,13 +154,14 @@ fn measure_frame_zones(
         DecodedPixels::Cfa(image) => (
             image.dimensions(),
             extract_green(&image)?,
-            extract_ca_planes(&image)?,
+            Some(extract_ca_planes(&image)?),
         ),
-        DecodedPixels::Rgb(image) => (
-            image.dimensions(),
-            extract_luma(&image)?,
-            extract_ca_planes(&image)?,
-        ),
+        DecodedPixels::Rgb(image) => {
+            let ca_planes = (image.components() == 3)
+                .then(|| extract_ca_planes(&image))
+                .transpose()?;
+            (image.dimensions(), extract_luma(&image)?, ca_planes)
+        }
     };
 
     let zones = default_zones(source_dimensions)?;
@@ -180,10 +181,10 @@ fn measure_frame_zones(
         .with_context(|| format!("non-finite measurement in {}", path.display()))?;
         let zone_index = zone_id_to_index(zone.id());
         measured.push((zone_index, zone_measurement));
-        if zone.id() != ZoneId::Centre {
+        if let (Some(ca_planes), true) = (&ca_planes, zone.id() != ZoneId::Centre) {
             ca_measured.push((
                 zone_index,
-                measure_ca_zone(&ca_planes, zone.rect()).with_context(|| {
+                measure_ca_zone(ca_planes, zone.rect()).with_context(|| {
                     format!("failed to measure lateral CA in {}", path.display())
                 })?,
             ));
@@ -193,8 +194,12 @@ fn measure_frame_zones(
     let vignetting = VignettingMeasurements {
         zones: vignetting_zones(&sharpness_zones)?,
     };
-    let ca_lateral = CaLateralMeasurements {
-        zones: ordered_ca_zone_measurements(ca_measured)?,
+    let ca_lateral = if ca_planes.is_some() {
+        CaLateralMeasurements {
+            zones: ordered_ca_zone_measurements(ca_measured)?,
+        }
+    } else {
+        CaLateralMeasurements::blocked_all(CaBlocker::UnsupportedColourChannels)
     };
     let full_plane = plane.image.patch(lenslab_core::image::Rect::new(
         0,

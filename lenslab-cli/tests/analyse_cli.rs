@@ -5,7 +5,7 @@ use std::process::{Command, Output};
 use serde_json::Value;
 use tempfile::TempDir;
 use tiff::encoder::TiffEncoder;
-use tiff::encoder::colortype::RGB16;
+use tiff::encoder::colortype::{Gray16, RGB16};
 
 fn lenslab(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_lenslab"))
@@ -51,6 +51,19 @@ fn write_gray_vignetting_tiff(path: &Path) {
         samples.push(value);
     }
     image.write_data(&samples).expect("write RGB TIFF data");
+}
+
+fn write_luma_tiff(path: &Path, width: u32, height: u32) {
+    let file = File::create(path).expect("create TIFF");
+    let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
+    let image = encoder
+        .new_image::<Gray16>(width, height)
+        .expect("new Gray TIFF");
+    let mut samples = Vec::with_capacity(width as usize * height as usize);
+    for sample in 0..width * height {
+        samples.push(10_000 + u16::try_from(sample % 20_000).unwrap());
+    }
+    image.write_data(&samples).expect("write Gray TIFF data");
 }
 
 fn paint_rect(
@@ -184,7 +197,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion");
+    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -274,6 +287,49 @@ fn analyse_writes_json_for_rgb_tiff_to_stdout() {
 }
 
 #[test]
+fn analyse_writes_json_for_luma_tiff_with_ca_blocked() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("luma.tif");
+    write_luma_tiff(&input, 80, 60);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+
+    assert_eq!(json["inputs"][0]["source_kind"], "rgb");
+    for corner in ca_corner_names() {
+        assert_eq!(
+            json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"],
+            Value::Null
+        );
+        assert_eq!(
+            json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["blockers"]
+                [0],
+            "unsupported_colour_channels"
+        );
+        assert!(
+            json["groups"][0]["ca_lateral"][corner]["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|blocker| blocker == "unsupported_colour_channels")
+        );
+        assert!(
+            json["groups"][0]["ca_lateral"][corner]["excluded"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|excluded| excluded["reason"] == "unknown_corrections"
+                    && excluded["count"] == 1)
+        );
+    }
+    assert_eq!(
+        json["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["luminance"]
+            ["confidence"],
+        0.0
+    );
+}
+
+#[test]
 fn analyse_reports_synthetic_lateral_ca_shift() {
     let dir = TempDir::new().expect("tempdir");
     let input = dir.path().join("shifted.tif");
@@ -282,7 +338,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion");
+    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -313,7 +369,7 @@ fn analyse_reports_synthetic_distortion_bow_candidate() {
     let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
     let candidate = &distortion["candidate"];
 
-    assert_eq!(json["schema_version"], "0.1-distortion");
+    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
     assert_eq!(candidate["orientation"], "horizontal");
     assert_eq!(candidate["reference_side"], "top");
     assert_eq!(candidate["bow"]["unit"], "percent_frame");
@@ -525,7 +581,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion");
+    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
     assert_ne!(json["schema_version"], "1.0");
 }
 
