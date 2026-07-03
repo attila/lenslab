@@ -2,17 +2,19 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
-use lenslab_core::channels::{extract_green, extract_luma};
+use lenslab_core::channels::{ExtractedCaPlanes, extract_ca_planes, extract_green, extract_luma};
 use lenslab_core::metrics::acutance::measure_acutance;
+use lenslab_core::metrics::ca::{aggregate_group_ca, measure_lateral_ca};
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
 use lenslab_core::metrics::vignetting::{
     aggregate_group_vignetting, apply_reference_relative_vignetting, measured_falloff,
     median_luminance,
 };
 use lenslab_core::schema::{
-    AnalyseGroup, AnalyseInput, AnalyseReport, CorrectionStatus, FrameMeasurement, Measurements,
-    SharpnessMeasurements, SourceKind, VignettingMeasurements, VignettingZoneMeasurements,
-    ZoneMeasurement, ZoneMeasurements,
+    AnalyseGroup, AnalyseInput, AnalyseReport, CaLateralMeasurements, CaZoneEvidence,
+    CaZoneMeasurements, CorrectionStatus, FrameMeasurement, Measurements, SharpnessMeasurements,
+    SourceKind, VignettingMeasurements, VignettingZoneMeasurements, ZoneMeasurement,
+    ZoneMeasurements,
 };
 use lenslab_core::zones::{ZoneId, default_zones, project_zone};
 use lenslab_decode::{DecodedFrame, DecodedPixels, FrameInfo};
@@ -53,6 +55,7 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
                         zones: zones.sharpness_zones,
                     },
                     vignetting: zones.vignetting,
+                    ca_lateral: zones.ca_lateral,
                 },
             },
         });
@@ -135,6 +138,7 @@ struct MeasuredZones {
     info: FrameInfo,
     sharpness_zones: ZoneMeasurements,
     vignetting: VignettingMeasurements,
+    ca_lateral: CaLateralMeasurements,
 }
 
 fn measure_frame_zones(
@@ -143,13 +147,22 @@ fn measure_frame_zones(
     aggregation_eligible: bool,
 ) -> anyhow::Result<MeasuredZones> {
     let info = frame.info;
-    let (source_dimensions, plane) = match frame.pixels {
-        DecodedPixels::Cfa(image) => (image.dimensions(), extract_green(&image)?),
-        DecodedPixels::Rgb(image) => (image.dimensions(), extract_luma(&image)?),
+    let (source_dimensions, plane, ca_planes) = match frame.pixels {
+        DecodedPixels::Cfa(image) => (
+            image.dimensions(),
+            extract_green(&image)?,
+            extract_ca_planes(&image)?,
+        ),
+        DecodedPixels::Rgb(image) => (
+            image.dimensions(),
+            extract_luma(&image)?,
+            extract_ca_planes(&image)?,
+        ),
     };
 
     let zones = default_zones(source_dimensions)?;
     let mut measured = Vec::with_capacity(5);
+    let mut ca_measured = Vec::with_capacity(4);
     for zone in zones {
         let rect = project_zone(zone.rect(), plane.grid)?;
         let patch_view = plane.image.patch(rect)?;
@@ -162,18 +175,43 @@ fn measure_frame_zones(
             aggregation_eligible,
         )
         .with_context(|| format!("non-finite measurement in {}", path.display()))?;
-        measured.push((zone_id_to_index(zone.id()), zone_measurement));
+        let zone_index = zone_id_to_index(zone.id());
+        measured.push((zone_index, zone_measurement));
+        if zone.id() != ZoneId::Centre {
+            ca_measured.push((
+                zone_index,
+                measure_ca_zone(&ca_planes, zone.rect()).with_context(|| {
+                    format!("failed to measure lateral CA in {}", path.display())
+                })?,
+            ));
+        }
     }
     let sharpness_zones = ordered_zone_measurements(measured)?;
     let vignetting = VignettingMeasurements {
         zones: vignetting_zones(&sharpness_zones)?,
+    };
+    let ca_lateral = CaLateralMeasurements {
+        zones: ordered_ca_zone_measurements(ca_measured)?,
     };
 
     Ok(MeasuredZones {
         info,
         sharpness_zones,
         vignetting,
+        ca_lateral,
     })
+}
+
+fn measure_ca_zone(
+    planes: &ExtractedCaPlanes,
+    source_rect: lenslab_core::image::Rect,
+) -> anyhow::Result<CaZoneEvidence> {
+    let rect = project_zone(source_rect, planes.grid)?;
+    Ok(measure_lateral_ca(
+        planes.red.patch(rect)?,
+        planes.blue.patch(rect)?,
+        planes.full_resolution_scale,
+    )?)
 }
 
 fn zone_id_to_index(id: ZoneId) -> usize {
@@ -198,6 +236,25 @@ fn ordered_zone_measurements(
         .try_into()
         .map_err(|_| anyhow::anyhow!("expected five zone measurements"))?;
     Ok(ZoneMeasurements::from_ordered(zones))
+}
+
+fn ordered_ca_zone_measurements(
+    mut measured: Vec<(usize, CaZoneEvidence)>,
+) -> anyhow::Result<CaZoneMeasurements> {
+    measured.sort_by_key(|(index, _)| *index);
+    let zones = measured
+        .into_iter()
+        .map(|(_, zone)| zone)
+        .collect::<Vec<_>>();
+    let [top_left, top_right, bottom_left, bottom_right]: [CaZoneEvidence; 4] = zones
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("expected four CA zone measurements"))?;
+    Ok(CaZoneMeasurements {
+        top_left,
+        top_right,
+        bottom_left,
+        bottom_right,
+    })
 }
 
 fn vignetting_zones(zones: &ZoneMeasurements) -> anyhow::Result<VignettingZoneMeasurements> {
@@ -254,12 +311,15 @@ fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>>
             .context("failed to aggregate decentring evidence")?;
         let vignetting = aggregate_group_vignetting(&group.frames)
             .context("failed to aggregate vignetting evidence")?;
+        let ca_lateral =
+            aggregate_group_ca(&group.frames).context("failed to aggregate lateral CA evidence")?;
         analyse_groups.push(AnalyseGroup {
             lens_model: group.key.lens_model,
             focal_length_mm: group.key.focal_length_mm,
             f_number: group.key.f_number,
             decentring,
             vignetting,
+            ca_lateral,
             frames: group.frames,
         });
     }
@@ -277,9 +337,9 @@ struct GroupedFrames {
 mod tests {
     use super::{AnalysedFrame, GroupKey, group_frames};
     use lenslab_core::schema::{
-        CornerFalloff, FrameMeasurement, Measurements, SharpnessMeasurements,
-        VignettingMeasurements, VignettingNumericMeasurement, VignettingZoneMeasurements,
-        ZoneMeasurement, ZoneMeasurements,
+        CaBlocker, CaLateralMeasurements, CornerFalloff, FrameMeasurement, Measurements,
+        SharpnessMeasurements, VignettingMeasurements, VignettingNumericMeasurement,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn frame(input_index: usize) -> FrameMeasurement {
@@ -306,6 +366,7 @@ mod tests {
                         bottom_right: falloff(-1.0),
                     },
                 },
+                ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
             },
         }
     }

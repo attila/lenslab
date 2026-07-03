@@ -5,7 +5,7 @@ use std::process::{Command, Output};
 use serde_json::Value;
 use tempfile::TempDir;
 use tiff::encoder::TiffEncoder;
-use tiff::encoder::colortype::{Gray16, RGB16};
+use tiff::encoder::colortype::RGB16;
 
 fn lenslab(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_lenslab"))
@@ -18,12 +18,16 @@ fn write_gray_tiff(path: &Path, width: u32, height: u32, offset: u16) {
     let file = File::create(path).expect("create TIFF");
     let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
     let image = encoder
-        .new_image::<Gray16>(width, height)
-        .expect("new gray TIFF");
-    let samples = (0..width * height)
-        .map(|sample| offset.wrapping_add(u16::try_from(sample % 65_535).unwrap()))
-        .collect::<Vec<_>>();
-    image.write_data(&samples).expect("write gray TIFF data");
+        .new_image::<RGB16>(width, height)
+        .expect("new RGB TIFF");
+    let mut samples = Vec::with_capacity(width as usize * height as usize * 3);
+    for sample in 0..width * height {
+        let value = offset.wrapping_add(u16::try_from(sample % 65_535).unwrap());
+        samples.push(value);
+        samples.push(value);
+        samples.push(value);
+    }
+    image.write_data(&samples).expect("write RGB TIFF data");
 }
 
 fn write_gray_vignetting_tiff(path: &Path) {
@@ -32,15 +36,21 @@ fn write_gray_vignetting_tiff(path: &Path) {
     let file = File::create(path).expect("create TIFF");
     let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
     let image = encoder
-        .new_image::<Gray16>(WIDTH, HEIGHT)
-        .expect("new gray TIFF");
-    let mut samples = vec![30_000_u16; WIDTH as usize * HEIGHT as usize];
-    paint_rect(&mut samples, WIDTH, 43, 43, 13, 13, 40_000);
-    paint_rect(&mut samples, WIDTH, 5, 5, 13, 13, 20_000);
-    paint_rect(&mut samples, WIDTH, 82, 5, 13, 13, 20_000);
-    paint_rect(&mut samples, WIDTH, 5, 82, 13, 13, 20_000);
-    paint_rect(&mut samples, WIDTH, 82, 82, 13, 13, 20_000);
-    image.write_data(&samples).expect("write gray TIFF data");
+        .new_image::<RGB16>(WIDTH, HEIGHT)
+        .expect("new RGB TIFF");
+    let mut mono = vec![30_000_u16; WIDTH as usize * HEIGHT as usize];
+    paint_rect(&mut mono, WIDTH, 43, 43, 13, 13, 40_000);
+    paint_rect(&mut mono, WIDTH, 5, 5, 13, 13, 20_000);
+    paint_rect(&mut mono, WIDTH, 82, 5, 13, 13, 20_000);
+    paint_rect(&mut mono, WIDTH, 5, 82, 13, 13, 20_000);
+    paint_rect(&mut mono, WIDTH, 82, 82, 13, 13, 20_000);
+    let mut samples = Vec::with_capacity(mono.len() * 3);
+    for value in mono {
+        samples.push(value);
+        samples.push(value);
+        samples.push(value);
+    }
+    image.write_data(&samples).expect("write RGB TIFF data");
 }
 
 fn paint_rect(
@@ -76,6 +86,39 @@ fn write_rgb_tiff(path: &Path, width: u32, height: u32) {
     image.write_data(&samples).expect("write RGB TIFF data");
 }
 
+fn write_ca_shift_tiff(path: &Path, x_shift: i32) {
+    const WIDTH: u32 = 100;
+    const HEIGHT: u32 = 100;
+    let file = File::create(path).expect("create TIFF");
+    let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
+    let image = encoder
+        .new_image::<RGB16>(WIDTH, HEIGHT)
+        .expect("new RGB TIFF");
+    let mut samples = Vec::with_capacity(WIDTH as usize * HEIGHT as usize * 3);
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let red_x = x.saturating_add_signed(-x_shift);
+            let red = ca_texture(red_x, y);
+            let blue = ca_texture(x, y);
+            let green = ca_texture(x, y.saturating_add(1));
+            samples.push(red);
+            samples.push(green);
+            samples.push(blue);
+        }
+    }
+    image.write_data(&samples).expect("write RGB TIFF data");
+}
+
+fn ca_texture(x: u32, y: u32) -> u16 {
+    let x_hash = x.wrapping_mul(2_654_435_761).rotate_left(13) % 24_000;
+    let y_hash = y.wrapping_mul(2_246_822_519).rotate_left(7) % 16_000;
+    u16::try_from(10_000 + x_hash + y_hash).expect("texture fits in u16")
+}
+
+fn ca_corner_names() -> [&'static str; 4] {
+    ["top_left", "top_right", "bottom_left", "bottom_right"]
+}
+
 fn assert_empty_stdout(output: &Output) {
     assert!(
         output.stdout.is_empty(),
@@ -103,7 +146,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-vignetting");
+    assert_eq!(json["schema_version"], "0.1-ca");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -152,6 +195,17 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
         .as_f64()
         .expect("falloff value");
     assert!((frame_falloff + 1.0).abs() < 1.0e-6, "{frame_falloff}");
+    for corner in ca_corner_names() {
+        assert_eq!(
+            json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["blockers"]
+                [0],
+            "flat_profile"
+        );
+        assert_eq!(
+            json["groups"][0]["ca_lateral"][corner]["excluded"][0]["reason"],
+            "unknown_corrections"
+        );
+    }
 }
 
 #[test]
@@ -169,6 +223,61 @@ fn analyse_writes_json_for_rgb_tiff_to_stdout() {
         .as_f64()
         .unwrap()
         .is_finite());
+}
+
+#[test]
+fn analyse_reports_synthetic_lateral_ca_shift() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("shifted.tif");
+    write_ca_shift_tiff(&input, 2);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+
+    assert_eq!(json["schema_version"], "0.1-ca");
+    for corner in ca_corner_names() {
+        let shift =
+            &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
+        assert_close_json(&shift["x"]["value"], 2.0, 0.25);
+        assert_close_json(&shift["y"]["value"], 0.0, 0.25);
+        assert_close_json(&shift["magnitude"]["value"], 2.0, 0.25);
+        assert_eq!(shift["x"]["unit"], "px_fullres");
+        assert_eq!(shift["x"]["method"], "measured_channel_correlation");
+        assert_eq!(
+            json["groups"][0]["ca_lateral"][corner]["included_samples"],
+            0
+        );
+        assert_eq!(
+            json["groups"][0]["ca_lateral"][corner]["excluded"][0]["reason"],
+            "unknown_corrections"
+        );
+    }
+}
+
+#[test]
+fn analyse_reports_near_zero_lateral_ca_for_unshifted_rgb() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("unshifted.tif");
+    write_ca_shift_tiff(&input, 0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+
+    for corner in ca_corner_names() {
+        let shift =
+            &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
+        assert_close_json(&shift["x"]["value"], 0.0, 0.05);
+        assert_close_json(&shift["y"]["value"], 0.0, 0.05);
+        assert_close_json(&shift["magnitude"]["value"], 0.0, 0.05);
+    }
+}
+
+fn assert_close_json(value: &Value, expected: f64, tolerance: f64) {
+    let actual = value.as_f64().expect("numeric JSON value");
+    assert!(
+        (actual - expected).abs() <= tolerance,
+        "actual {actual} expected {expected}"
+    );
 }
 
 #[test]
@@ -287,7 +396,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-vignetting");
+    assert_eq!(json["schema_version"], "0.1-ca");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -375,6 +484,18 @@ fn analyse_unknown_tiff_correction_provenance_is_visible() {
             .unwrap()
             .is_finite()
     );
+    for corner in ca_corner_names() {
+        assert!(
+            json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]
+                .as_object()
+                .unwrap()
+                .contains_key("shift")
+        );
+        assert_eq!(
+            json["groups"][0]["ca_lateral"][corner]["excluded"][0]["reason"],
+            "unknown_corrections"
+        );
+    }
 }
 
 #[cfg(feature = "real-fixtures")]
@@ -425,6 +546,23 @@ fn analyse_measures_real_bayer_dng_fixture() {
     let bottom_delta = zones["bottom_left"]["acutance"]["value"].as_f64().unwrap()
         - zones["bottom_right"]["acutance"]["value"].as_f64().unwrap();
     assert!((bottom_pair["mean_delta"]["value"].as_f64().unwrap() - bottom_delta).abs() < 1.0e-6);
+
+    for corner in ca_corner_names() {
+        let ca_zone =
+            &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
+        for axis in ["x", "y", "magnitude"] {
+            assert_eq!(ca_zone[axis]["unit"], "px_fullres");
+            assert_eq!(ca_zone[axis]["method"], "measured_channel_correlation");
+            assert!(
+                ca_zone[axis]["value"].as_f64().unwrap().is_finite(),
+                "{corner} {axis}"
+            );
+        }
+        assert_eq!(
+            json["groups"][0]["ca_lateral"][corner]["included_samples"],
+            1
+        );
+    }
 }
 
 #[cfg(feature = "real-fixtures")]

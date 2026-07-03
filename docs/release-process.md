@@ -106,6 +106,8 @@ Avoid a fixed cadence; cut a release when there is something worth releasing.
 
    - Confirm the format matches existing entries (Keep a Changelog 1.1.0 — see
      <https://keepachangelog.com/en/1.1.0/>).
+   - Write bullets to fit their section heading: under `Added`, prefer the feature or capability
+     itself rather than repeating "Added ..." at the start of every entry.
    - Add or refine breaking notices and upgrade instructions, especially for the JSON output
      contract's `schema_version`.
    - **Do not run `just changelog`** — that recipe regenerates CHANGELOG from git-cliff and would

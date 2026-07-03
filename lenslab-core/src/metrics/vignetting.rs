@@ -401,11 +401,11 @@ mod tests {
     };
     use crate::image::{Dimensions, LinearImage, Rect};
     use crate::schema::{
-        AnalyseGroup, CornerFalloff, DecentringEvidence, ExclusionReason, FrameMeasurement,
-        LeftRightDecentring, Measurements, PairId, PairSummary, ReliabilityBlocker,
-        SharpnessMeasurements, VignettingBlocker, VignettingCornerValues, VignettingMeasurements,
-        VignettingNumericMeasurement, VignettingZoneMeasurements, ZoneMeasurement,
-        ZoneMeasurements,
+        AnalyseGroup, CaBlocker, CaLateralEvidence, CaLateralMeasurements, CornerFalloff,
+        DecentringEvidence, ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements,
+        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, VignettingBlocker,
+        VignettingCornerValues, VignettingMeasurements, VignettingNumericMeasurement,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn patch(samples: Vec<f32>) -> LinearImage {
@@ -510,6 +510,7 @@ mod tests {
                         },
                     },
                 },
+                ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
             },
         }
     }
@@ -541,6 +542,7 @@ mod tests {
             f_number: Some(f_number),
             decentring: decentring(),
             vignetting: aggregate_group_vignetting(&frames).unwrap(),
+            ca_lateral: CaLateralEvidence::empty(),
             frames,
         }
     }
@@ -666,6 +668,7 @@ mod tests {
             f_number: Some(4.0),
             decentring: decentring(),
             vignetting: aggregate_group_vignetting(&frames).unwrap(),
+            ca_lateral: CaLateralEvidence::empty(),
             frames,
         };
         group.vignetting.reference_f_number = Some(11.0);
