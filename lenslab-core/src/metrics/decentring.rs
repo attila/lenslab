@@ -245,6 +245,9 @@ mod tests {
                     },
                 },
                 ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
+                distortion: crate::schema::DistortionMeasurements::blocked(
+                    crate::schema::DistortionBlocker::NoStraightReference,
+                ),
             },
         }
     }

@@ -511,6 +511,9 @@ mod tests {
                     },
                 },
                 ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
+                distortion: crate::schema::DistortionMeasurements::blocked(
+                    crate::schema::DistortionBlocker::NoStraightReference,
+                ),
             },
         }
     }
@@ -543,6 +546,7 @@ mod tests {
             decentring: decentring(),
             vignetting: aggregate_group_vignetting(&frames).unwrap(),
             ca_lateral: CaLateralEvidence::empty(),
+            distortion: crate::schema::DistortionEvidence::empty(),
             frames,
         }
     }
@@ -669,6 +673,7 @@ mod tests {
             decentring: decentring(),
             vignetting: aggregate_group_vignetting(&frames).unwrap(),
             ca_lateral: CaLateralEvidence::empty(),
+            distortion: crate::schema::DistortionEvidence::empty(),
             frames,
         };
         group.vignetting.reference_f_number = Some(11.0);

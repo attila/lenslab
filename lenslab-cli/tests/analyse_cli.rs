@@ -109,6 +109,44 @@ fn write_ca_shift_tiff(path: &Path, x_shift: i32) {
     image.write_data(&samples).expect("write RGB TIFF data");
 }
 
+#[allow(clippy::cast_precision_loss)]
+fn write_distortion_line_tiff(path: &Path, span: LineSpan, sagitta: f32) {
+    const WIDTH: u32 = 100;
+    const HEIGHT: u32 = 70;
+    let file = File::create(path).expect("create TIFF");
+    let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
+    let image = encoder
+        .new_image::<RGB16>(WIDTH, HEIGHT)
+        .expect("new RGB TIFF");
+    let mut mono = vec![50_000_u16; WIDTH as usize * HEIGHT as usize];
+    let (start, end) = match span {
+        LineSpan::Full => (0, WIDTH - 1),
+        LineSpan::Short => (WIDTH / 3, WIDTH * 2 / 3),
+    };
+    for x in start..=end {
+        let t = (x - start) as f32 / (end - start) as f32;
+        let line_y = 12.0 + 4.0 * sagitta * t * (1.0 - t);
+        for y in 0..HEIGHT {
+            if (y as f32 - line_y).abs() <= 1.0 {
+                mono[(y * WIDTH + x) as usize] = 2_000;
+            }
+        }
+    }
+    let mut samples = Vec::with_capacity(mono.len() * 3);
+    for value in mono {
+        samples.push(value);
+        samples.push(value);
+        samples.push(value);
+    }
+    image.write_data(&samples).expect("write RGB TIFF data");
+}
+
+#[derive(Clone, Copy)]
+enum LineSpan {
+    Full,
+    Short,
+}
+
 fn ca_texture(x: u32, y: u32) -> u16 {
     let x_hash = x.wrapping_mul(2_654_435_761).rotate_left(13) % 24_000;
     let y_hash = y.wrapping_mul(2_246_822_519).rotate_left(7) % 16_000;
@@ -146,7 +184,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-ca");
+    assert_eq!(json["schema_version"], "0.1-distortion");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -206,6 +244,16 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
             "unknown_corrections"
         );
     }
+    assert!(
+        json["groups"][0]["frames"][0]["measurements"]["distortion"]
+            .as_object()
+            .expect("frame distortion")
+            .contains_key("candidate")
+    );
+    assert_eq!(
+        json["groups"][0]["distortion"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
 }
 
 #[test]
@@ -234,7 +282,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-ca");
+    assert_eq!(json["schema_version"], "0.1-distortion");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -252,6 +300,87 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
             "unknown_corrections"
         );
     }
+}
+
+#[test]
+fn analyse_reports_synthetic_distortion_bow_candidate() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("bowed.tif");
+    write_distortion_line_tiff(&input, LineSpan::Full, -5.0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
+    let candidate = &distortion["candidate"];
+
+    assert_eq!(json["schema_version"], "0.1-distortion");
+    assert_eq!(candidate["orientation"], "horizontal");
+    assert_eq!(candidate["reference_side"], "top");
+    assert_eq!(candidate["bow"]["unit"], "percent_frame");
+    assert_eq!(candidate["bow"]["method"], "measured_straight_line_bow");
+    assert_close_json(&candidate["bow"]["value"], 7.14, 0.8);
+    assert!(distortion["blockers"].as_array().unwrap().is_empty());
+    assert_eq!(
+        json["groups"][0]["distortion"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
+}
+
+#[test]
+fn analyse_reports_negative_synthetic_distortion_bow_candidate() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("negative-bow.tif");
+    write_distortion_line_tiff(&input, LineSpan::Full, 5.0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let candidate = &json["groups"][0]["frames"][0]["measurements"]["distortion"]["candidate"];
+
+    assert_eq!(candidate["orientation"], "horizontal");
+    assert_eq!(candidate["reference_side"], "top");
+    assert_eq!(candidate["bow"]["method"], "measured_straight_line_bow");
+    assert_close_json(&candidate["bow"]["value"], -7.14, 0.8);
+}
+
+#[test]
+fn analyse_reports_weak_distortion_reference_as_inferred() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("short-bow.tif");
+    write_distortion_line_tiff(&input, LineSpan::Short, 5.0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
+
+    assert_eq!(
+        distortion["candidate"]["bow"]["method"],
+        "inferred_weak_reference_bow"
+    );
+    assert_eq!(distortion["blockers"][0], "weak_reference_geometry");
+    assert_eq!(
+        json["groups"][0]["distortion"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
+}
+
+#[test]
+fn analyse_reports_no_distortion_reference_as_blocker() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("plain.tif");
+    write_gray_tiff(&input, 80, 60, 0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
+
+    assert_eq!(distortion["candidate"], Value::Null);
+    assert!(
+        distortion["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "no_straight_reference" || blocker == "fit_residual_too_high")
+    );
 }
 
 #[test]
@@ -396,7 +525,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-ca");
+    assert_eq!(json["schema_version"], "0.1-distortion");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -417,10 +546,12 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
         "decentred",
         "confidence",
         "artifacts",
-        "distortion",
         "ca_lateral",
         "field_curvature",
         "mtf50",
+        "target_role",
+        "checkerboard_calibration",
+        "edge_distortion",
     ] {
         assert!(json.get(key).is_none(), "{key}");
     }
@@ -435,6 +566,12 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
             .as_object()
             .expect("frame vignetting")
             .contains_key("zones")
+    );
+    assert!(
+        json["groups"][0]
+            .as_object()
+            .expect("group")
+            .contains_key("distortion")
     );
 }
 
@@ -496,6 +633,16 @@ fn analyse_unknown_tiff_correction_provenance_is_visible() {
             "unknown_corrections"
         );
     }
+    assert!(
+        json["groups"][0]["frames"][0]["measurements"]["distortion"]
+            .as_object()
+            .unwrap()
+            .contains_key("candidate")
+    );
+    assert_eq!(
+        json["groups"][0]["distortion"]["excluded"][0]["reason"],
+        "unknown_corrections"
+    );
 }
 
 #[cfg(feature = "real-fixtures")]
@@ -562,6 +709,16 @@ fn analyse_measures_real_bayer_dng_fixture() {
             json["groups"][0]["ca_lateral"][corner]["included_samples"],
             1
         );
+    }
+    let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
+    assert!(
+        distortion["candidate"].is_object() || distortion["candidate"] == Value::Null,
+        "{distortion}"
+    );
+    if let Some(candidate) = distortion["candidate"].as_object() {
+        assert!(candidate["bow"]["value"].as_f64().unwrap().is_finite());
+    } else {
+        assert!(!distortion["blockers"].as_array().unwrap().is_empty());
     }
 }
 

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-ca";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-distortion";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -49,6 +49,7 @@ pub struct AnalyseGroup {
     pub decentring: DecentringEvidence,
     pub vignetting: VignettingEvidence,
     pub ca_lateral: CaLateralEvidence,
+    pub distortion: DistortionEvidence,
     pub frames: Vec<FrameMeasurement>,
 }
 
@@ -140,6 +141,109 @@ pub struct Measurements {
     pub sharpness: SharpnessMeasurements,
     pub vignetting: VignettingMeasurements,
     pub ca_lateral: CaLateralMeasurements,
+    pub distortion: DistortionMeasurements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DistortionMeasurements {
+    pub candidate: Option<DistortionCandidate>,
+    pub blockers: Vec<DistortionBlocker>,
+}
+
+impl DistortionMeasurements {
+    #[must_use]
+    pub fn blocked(blocker: DistortionBlocker) -> Self {
+        Self {
+            candidate: None,
+            blockers: vec![blocker],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DistortionCandidate {
+    pub orientation: DistortionOrientation,
+    pub reference_side: Option<DistortionReferenceSide>,
+    pub bow: DistortionMeasurement,
+    pub sagitta_px: f32,
+    pub span_coverage: f32,
+    pub fit_residual_px: f32,
+}
+
+impl DistortionCandidate {
+    #[must_use]
+    pub fn new(
+        orientation: DistortionOrientation,
+        reference_side: Option<DistortionReferenceSide>,
+        bow: DistortionMeasurement,
+        sagitta_px: f32,
+        span_coverage: f32,
+        fit_residual_px: f32,
+    ) -> Option<Self> {
+        (sagitta_px.is_finite() && span_coverage.is_finite() && fit_residual_px.is_finite())
+            .then_some(Self {
+                orientation,
+                reference_side,
+                bow,
+                sagitta_px,
+                span_coverage,
+                fit_residual_px,
+            })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DistortionEvidence {
+    pub included_samples: usize,
+    pub excluded_samples: usize,
+    pub mean_bow: Option<DistortionMeasurement>,
+    pub scatter: Option<DistortionMeasurement>,
+    pub blockers: Vec<DistortionBlocker>,
+    pub excluded: Vec<ExclusionCount>,
+}
+
+impl DistortionEvidence {
+    #[must_use]
+    pub fn empty() -> Self {
+        Self {
+            included_samples: 0,
+            excluded_samples: 0,
+            mean_bow: None,
+            scatter: None,
+            blockers: vec![DistortionBlocker::InsufficientSamples],
+            excluded: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct DistortionMeasurement {
+    pub value: f32,
+    pub unit: NumericUnit,
+    pub method: DistortionMethod,
+    pub confidence: f32,
+}
+
+impl DistortionMeasurement {
+    #[must_use]
+    pub fn measured_percent_frame(value: f32) -> Option<Self> {
+        Self::percent_frame(value, DistortionMethod::MeasuredStraightLineBow, 0.9)
+    }
+
+    #[must_use]
+    pub fn inferred_percent_frame(value: f32) -> Option<Self> {
+        Self::percent_frame(value, DistortionMethod::InferredWeakReferenceBow, 0.4)
+    }
+
+    #[must_use]
+    pub fn percent_frame(value: f32, method: DistortionMethod, confidence: f32) -> Option<Self> {
+        (value.is_finite() && confidence.is_finite()).then_some(Self {
+            value,
+            unit: NumericUnit::PercentFrame,
+            method,
+            confidence,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -493,6 +597,7 @@ pub enum NumericUnit {
     LinearLuminance,
     PxFullres,
     Stops,
+    PercentFrame,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -518,6 +623,42 @@ pub enum VignettingMethod {
 #[serde(rename_all = "snake_case")]
 pub enum CaMethod {
     MeasuredChannelCorrelation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DistortionMethod {
+    MeasuredStraightLineBow,
+    InferredWeakReferenceBow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DistortionOrientation {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DistortionReferenceSide {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DistortionBlocker {
+    InsufficientSamples,
+    NoStraightReference,
+    WeakReferenceGeometry,
+    LowContrast,
+    LineDiscontinuous,
+    FitResidualTooHigh,
+    ProfileTooShort,
+    UnknownCorrections,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -581,6 +722,11 @@ pub enum ExclusionReason {
     FlatProfile,
     CorrelationPeakNotFound,
     ProfileTooShort,
+    NoStraightReference,
+    WeakReferenceGeometry,
+    LowContrast,
+    LineDiscontinuous,
+    FitResidualTooHigh,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -594,11 +740,13 @@ mod tests {
     use super::{
         AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralEvidence,
         CaLateralMeasurements, CorrectionStatus, DecentringEvidence, DerivedNumericMeasurement,
-        ExclusionCount, ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements,
-        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind,
-        VignettingBlocker, VignettingCornerValues, VignettingEvidence, VignettingMeasurements,
-        VignettingMethod, VignettingNumericMeasurement, VignettingSymmetry,
-        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        DistortionBlocker, DistortionCandidate, DistortionEvidence, DistortionMeasurement,
+        DistortionMeasurements, DistortionOrientation, DistortionReferenceSide, ExclusionCount,
+        ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements, PairId, PairSummary,
+        ReliabilityBlocker, SharpnessMeasurements, SourceKind, VignettingBlocker,
+        VignettingCornerValues, VignettingEvidence, VignettingMeasurements, VignettingMethod,
+        VignettingNumericMeasurement, VignettingSymmetry, VignettingZoneMeasurements,
+        ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
@@ -633,6 +781,7 @@ mod tests {
                     },
                 },
                 ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
+                distortion: DistortionMeasurements::blocked(DistortionBlocker::NoStraightReference),
             },
         }
     }
@@ -668,6 +817,43 @@ mod tests {
             ],
             excluded: vec![],
             symmetry: VignettingSymmetry::not_assessed(),
+        }
+    }
+
+    fn measured_distortion_candidate() -> DistortionCandidate {
+        DistortionCandidate::new(
+            DistortionOrientation::Horizontal,
+            Some(DistortionReferenceSide::Top),
+            DistortionMeasurement::measured_percent_frame(0.18).expect("finite bow"),
+            1.8,
+            0.82,
+            0.12,
+        )
+        .expect("finite candidate")
+    }
+
+    fn inferred_distortion_candidate() -> DistortionCandidate {
+        DistortionCandidate::new(
+            DistortionOrientation::Vertical,
+            None,
+            DistortionMeasurement::inferred_percent_frame(-0.08).expect("finite bow"),
+            -0.8,
+            0.45,
+            0.1,
+        )
+        .expect("finite candidate")
+    }
+
+    fn distortion() -> DistortionEvidence {
+        DistortionEvidence {
+            included_samples: 1,
+            excluded_samples: 0,
+            mean_bow: Some(
+                DistortionMeasurement::measured_percent_frame(0.18).expect("finite mean bow"),
+            ),
+            scatter: None,
+            blockers: vec![DistortionBlocker::InsufficientSamples],
+            excluded: vec![],
         }
     }
 
@@ -748,6 +934,7 @@ mod tests {
                 decentring: two_sample_decentring(),
                 vignetting: vignetting(),
                 ca_lateral: CaLateralEvidence::empty(),
+                distortion: distortion(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -755,8 +942,8 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-ca\","));
-        assert_eq!(value["schema_version"], "0.1-ca");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-distortion\","));
+        assert_eq!(value["schema_version"], "0.1-distortion");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_group_field_order(&json);
@@ -764,6 +951,7 @@ mod tests {
         assert_frame_measurement_json(&value);
         assert_vignetting_json(&value);
         assert_ca_json(&value);
+        assert_distortion_json(&value);
     }
 
     fn assert_group_field_order(json: &str) {
@@ -788,6 +976,13 @@ mod tests {
         );
         assert!(
             json.find("\"ca_lateral\"").expect("group CA is serialised")
+                < json
+                    .find("\"distortion\"")
+                    .expect("group distortion is serialised")
+        );
+        assert!(
+            json.find("\"distortion\"")
+                .expect("group distortion is serialised")
                 < json
                     .find("\"frames\"")
                     .expect("group frames are serialised")
@@ -889,6 +1084,81 @@ mod tests {
         );
     }
 
+    fn assert_distortion_json(value: &serde_json::Value) {
+        assert_eq!(
+            value["groups"][0]["distortion"]["mean_bow"]["unit"],
+            "percent_frame"
+        );
+        assert_eq!(
+            value["groups"][0]["distortion"]["mean_bow"]["method"],
+            "measured_straight_line_bow"
+        );
+        assert_eq!(
+            value["groups"][0]["distortion"]["blockers"][0],
+            "insufficient_samples"
+        );
+
+        let measurements = &value["groups"][0]["frames"][0]["measurements"];
+        assert_eq!(
+            measurements["distortion"]["candidate"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            measurements["distortion"]["blockers"][0],
+            "no_straight_reference"
+        );
+    }
+
+    #[test]
+    fn serialises_distortion_frame_candidate_and_inferred_method_codes() {
+        let mut measured_frame = frame(0, "measured.tif", true);
+        measured_frame.measurements.distortion = DistortionMeasurements {
+            candidate: Some(measured_distortion_candidate()),
+            blockers: vec![],
+        };
+        let mut inferred_frame = frame(1, "inferred.tif", true);
+        inferred_frame.measurements.distortion = DistortionMeasurements {
+            candidate: Some(inferred_distortion_candidate()),
+            blockers: vec![DistortionBlocker::WeakReferenceGeometry],
+        };
+        let report = AnalyseReport::new(
+            "0.1.0",
+            vec![],
+            vec![AnalyseGroup {
+                lens_model: None,
+                focal_length_mm: None,
+                f_number: None,
+                decentring: two_sample_decentring(),
+                vignetting: vignetting(),
+                ca_lateral: CaLateralEvidence::empty(),
+                distortion: distortion(),
+                frames: vec![measured_frame, inferred_frame],
+            }],
+        );
+
+        let value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string_pretty(&report).unwrap()).unwrap();
+        let measured = &value["groups"][0]["frames"][0]["measurements"]["distortion"]["candidate"];
+        assert_eq!(measured["orientation"], "horizontal");
+        assert_eq!(measured["reference_side"], "top");
+        assert_eq!(measured["bow"]["unit"], "percent_frame");
+        assert_eq!(measured["bow"]["method"], "measured_straight_line_bow");
+        assert_eq!(measured["span_coverage"], 0.82);
+        assert_eq!(measured["fit_residual_px"], 0.12);
+
+        let inferred = &value["groups"][0]["frames"][1]["measurements"]["distortion"];
+        assert_eq!(inferred["candidate"]["orientation"], "vertical");
+        assert_eq!(
+            inferred["candidate"]["reference_side"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            inferred["candidate"]["bow"]["method"],
+            "inferred_weak_reference_bow"
+        );
+        assert_eq!(inferred["blockers"][0], "weak_reference_geometry");
+    }
+
     #[test]
     fn serialises_no_future_verdict_or_artifact_fields() {
         let report = AnalyseReport::new("0.1.0", vec![], vec![]);
@@ -903,6 +1173,11 @@ mod tests {
             "decentred",
             "confidence",
             "artifacts",
+            "field_curvature",
+            "mtf50",
+            "target_role",
+            "checkerboard_calibration",
+            "edge_distortion",
         ] {
             assert!(value.get(key).is_none(), "{key}");
         }
@@ -932,6 +1207,7 @@ mod tests {
                 ),
                 vignetting: vignetting(),
                 ca_lateral: CaLateralEvidence::empty(),
+                distortion: DistortionEvidence::empty(),
                 frames: vec![frame(0, "a.dng", true)],
             }],
         );
@@ -950,6 +1226,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn serialises_unknown_corrections_as_ineligible_with_provenance() {
         let report = AnalyseReport::new(
             "0.1.0",
@@ -1008,6 +1285,17 @@ mod tests {
                     ..vignetting()
                 },
                 ca_lateral: CaLateralEvidence::empty(),
+                distortion: DistortionEvidence {
+                    included_samples: 0,
+                    excluded_samples: 1,
+                    mean_bow: None,
+                    scatter: None,
+                    blockers: vec![DistortionBlocker::UnknownCorrections],
+                    excluded: vec![ExclusionCount {
+                        reason: ExclusionReason::UnknownCorrections,
+                        count: 1,
+                    }],
+                },
                 frames: vec![frame(0, "a.tif", false)],
             }],
         );
@@ -1058,6 +1346,18 @@ mod tests {
         assert!(DerivedNumericMeasurement::acutance_delta(f32::NAN).is_none());
         assert!(DerivedNumericMeasurement::acutance_delta(f32::NEG_INFINITY).is_none());
         assert!(VignettingNumericMeasurement::measured_stops(f32::NAN).is_none());
+        assert!(DistortionMeasurement::measured_percent_frame(f32::NAN).is_none());
+        assert!(
+            DistortionCandidate::new(
+                DistortionOrientation::Horizontal,
+                Some(DistortionReferenceSide::Bottom),
+                DistortionMeasurement::measured_percent_frame(0.1).unwrap(),
+                f32::INFINITY,
+                0.8,
+                0.1,
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -1073,6 +1373,7 @@ mod tests {
                     decentring: two_sample_decentring(),
                     vignetting: vignetting(),
                     ca_lateral: CaLateralEvidence::empty(),
+                    distortion: DistortionEvidence::empty(),
                     frames: vec![frame(0, "first.tif", false), frame(2, "third.tif", false)],
                 },
                 AnalyseGroup {
@@ -1082,6 +1383,7 @@ mod tests {
                     decentring: two_sample_decentring(),
                     vignetting: vignetting(),
                     ca_lateral: CaLateralEvidence::empty(),
+                    distortion: DistortionEvidence::empty(),
                     frames: vec![frame(1, "second.tif", false)],
                 },
             ],
