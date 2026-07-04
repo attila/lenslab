@@ -5,10 +5,11 @@ its JSON** — it does not measure anything itself. Keep it thin; all determinis
 (see DECISIONS D6).
 
 Current implementation note: this document describes the target coaching and verdict flow. The Rust
-CLI currently ships explicit-file JSON evidence through schema `0.1-target-qa`: acutance/contrast,
-vignetting, lateral CA, straight-line distortion, inferred field curvature, target QA, and
-evidence-only left/right decentring aggregation. Folder-based coaching, Markdown/HTML output,
-artefacts, MTF50, and copy verdict interpretation remain future plugin work.
+CLI currently ships explicit-file JSON evidence through schema `0.1-copy-assessment-support`:
+acutance/contrast, vignetting, lateral CA, straight-line distortion, inferred field curvature,
+target QA, evidence-only left/right decentring aggregation, and top-level `copy_assessment` support
+with blockers and reshoot guidance. Folder-based coaching, Markdown/HTML output, artefacts, MTF50,
+and human copy verdict interpretation remain future plugin work.
 
 ## Layout
 
@@ -38,11 +39,11 @@ The skill's `SKILL.md` instructs the agent to:
    **coach the shoot** (shooting-guide.md) rather than guessing from scenes.
 4. **Run measurement.** `lenslab analyse <folder> --format json,md` (plus `decentre` for a focused
    copy gate). Capture the JSON.
-5. **Interpret, do not recompute.** Read the JSON; produce the human brief using the
-   verified/inferred framing and the decentring discriminators from `interpreting-results.md`.
-   Present the artifact PNGs (contact sheet, corner crops, curves).
-6. **Coach re-shoots** when `verdict.copy = inconclusive` or `qa.gated = true` (e.g. keystone over
-   threshold).
+5. **Interpret, do not recompute.** Read the JSON; produce the human brief from `copy_assessment`,
+   the verified/inferred framing, and the decentring discriminators from `interpreting-results.md`.
+   Present the artifact PNGs (contact sheet, corner crops, curves) once those exist.
+6. **Coach re-shoots** when `copy_assessment.state = inconclusive` or target QA is gated/blocked
+   (e.g. keystone over threshold).
 
 ## Narrative contract
 

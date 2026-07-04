@@ -33,6 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Controlled vignetting aperture-series evidence using schema `0.1-vignetting-control`, including
   reference-relative optical deltas, symmetry residuals, conservative blockers/warnings, real-shot
   repeat-outlier handling, and a local-only real-DNG validation gate.
+- Copy assessment support evidence using schema `0.1-copy-assessment-support`, including target-QA
+  gated left/right acutance asymmetry, aperture-series sufficiency, field-curvature counterevidence,
+  blockers, and reshoot guidance without emitting a human copy verdict.
 - Checksum-pinned real-camera DNG fixtures and fixture tests for Bayer and X-Trans decode behaviour.
 - CI and release workflows covering formatting, clippy, tests, dependency checks, docs, fixture
   tests, four-target cross-compilation, and owner-approved GitHub Releases.

@@ -238,6 +238,30 @@ fn assert_blocked_unknown_field_curvature(json: &Value) {
     assert_eq!(summary["excluded"][0]["reason"], "unknown_corrections");
 }
 
+fn assert_inconclusive_copy_assessment(json: &Value) {
+    let support = &json["copy_assessment"];
+    assert_eq!(support["state"], "inconclusive");
+    assert_eq!(
+        support["method"],
+        "derived_from_target_qa_acutance_and_field_curvature"
+    );
+    assert_eq!(support["hard_support_eligible"], false);
+    assert!(
+        support["blockers"]
+            .as_array()
+            .expect("copy blockers")
+            .iter()
+            .all(Value::is_string)
+    );
+    assert!(
+        support["evidence"]
+            .as_object()
+            .expect("copy evidence")
+            .contains_key("centred_threshold")
+    );
+    assert_eq!(support.get("verdict"), None);
+}
+
 #[cfg(feature = "real-fixtures")]
 fn assert_legal_target_qa(json: &Value) {
     let target = &json["groups"][0]["frames"][0]["qa"]["target"];
@@ -286,7 +310,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-vignetting-control");
+    assert_eq!(json["schema_version"], "0.1-copy-assessment-support");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -368,6 +392,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
         "unknown_corrections"
     );
     assert_blocked_unknown_field_curvature(&json);
+    assert_inconclusive_copy_assessment(&json);
 }
 
 #[test]
@@ -439,7 +464,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-vignetting-control");
+    assert_eq!(json["schema_version"], "0.1-copy-assessment-support");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -470,7 +495,7 @@ fn analyse_reports_synthetic_distortion_bow_candidate() {
     let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
     let candidate = &distortion["candidate"];
 
-    assert_eq!(json["schema_version"], "0.1-vignetting-control");
+    assert_eq!(json["schema_version"], "0.1-copy-assessment-support");
     assert_eq!(candidate["orientation"], "horizontal");
     assert_eq!(candidate["reference_side"], "top");
     assert_eq!(candidate["bow"]["unit"], "percent_frame");
@@ -551,7 +576,7 @@ fn analyse_reports_frame_level_gated_target_qa_for_periodic_tiff() {
     let frame_target = &json["groups"][0]["frames"][0]["qa"]["target"];
     let group_target = &json["groups"][0]["decentring"]["target_quality"];
 
-    assert_eq!(json["schema_version"], "0.1-vignetting-control");
+    assert_eq!(json["schema_version"], "0.1-copy-assessment-support");
     assert_eq!(frame_target["status"], "gated");
     assert_eq!(frame_target["method"], "measured_periodic_reference_scale");
     assert_eq!(frame_target["tilt_axis"], "vertical");
@@ -750,7 +775,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-vignetting-control");
+    assert_eq!(json["schema_version"], "0.1-copy-assessment-support");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -802,6 +827,12 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
             .expect("report")
             .contains_key("field_curvature")
     );
+    assert!(
+        json.as_object()
+            .expect("report")
+            .contains_key("copy_assessment")
+    );
+    assert_inconclusive_copy_assessment(&json);
 }
 
 #[test]
@@ -962,6 +993,7 @@ fn analyse_measures_real_bayer_dng_fixture() {
             .all(Value::is_string)
     );
     assert!(!field_curvature["blockers"].as_array().unwrap().is_empty());
+    assert_inconclusive_copy_assessment(&json);
 }
 
 #[cfg(feature = "real-fixtures")]

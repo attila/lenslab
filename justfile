@@ -31,6 +31,10 @@ test-fixtures: fixtures
 test-local-vignetting:
     cargo test -p lenslab-cli --test local_vignetting_cli -- --ignored --nocapture
 
+# Run local-only copy assessment validation.
+test-local-copy-assessment:
+    cargo test -p lenslab-cli --test local_copy_assessment_cli -- --ignored --nocapture
+
 # Run dependency audits
 #
 # `GIT_CONFIG_*` overrides neutralise URL rewrites before gix (used by

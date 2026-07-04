@@ -13,11 +13,10 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
-  centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
-  narrative judgement in the plugin. Include a real controlled copy-test validation slice covering
-  decentring, target QA, and sharpness/acutance together, so the first hard-verdict boundary is
-  checked against realistic capture variation rather than synthetic fixtures alone.
+- **Guided capture workflow / plugin interpretation boundary** — turn the `copy_assessment` evidence
+  into user-facing coaching and narrative interpretation without moving judgement into the CLI. The
+  first slice should inspect an explicit or folder-backed capture set, explain why support is
+  centred/decentred/inconclusive, and coach the smallest reshoot when hard support is blocked.
 
 ## Remaining v0.1 Measurement Backlog
 
@@ -168,6 +167,16 @@ acceptance criteria are met.
   fixed-bias cancellation, threshold blockers, deterministic JSON, and verdict omissions; decoded
   TIFF tests keep unknown-correction exclusion honest; `just test-local-vignetting` provides a
   local-only real-DNG gate that skips when unconfigured — met by this change.
+- **Copy assessment support evidence** — `lenslab analyse <paths…>` emits schema
+  `0.1-copy-assessment-support` with top-level `copy_assessment` evidence derived from target-QA
+  gated left/right acutance asymmetry, correction provenance, aperture-series sufficiency, and
+  field-curvature counterevidence. The CLI remains a gatekeeper, not the judge: it can support
+  centred, support decentred, or report inconclusive with blockers and reshoot guidance, but it
+  still emits no human copy verdict or plugin narrative. _Done when:_ core synthetic oracle tests
+  cover centred/decentred/inconclusive/blocker paths, CLI tests cover the public JSON contract and
+  verdict omissions, decoded TIFF tests keep unknown-correction exclusion honest, and
+  `just test-local-copy-assessment` provides a local-only real-DNG product-realism gate that skips
+  when unconfigured — met by this change.
 
 ## Deferred / known gaps
 
@@ -217,6 +226,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   locality worse than centralised reading. _Done when:_ serde output remains byte-stable for
   existing fixtures, schema versioning stays central, and new measurement families can add DTOs
   without editing an oversized catch-all module.
+- **Mixed scene/target copy scoring** — option 3 from the copy-assessment planning remains
+  intentionally deferred. Scene or mixed captures may become useful as soft evidence after hard
+  target-series support exists, but they must not promote uncontrolled scene data to a hard copy
+  decision. _Done when:_ the plugin/CLI boundary defines separate soft-evidence fields, preserves
+  target-only hard support, and has false-positive tests for scene texture, framing tilt, lighting
+  gradients, and field curvature.
 - **Calibrated distortion model** — fit a lens distortion model only after target geometry and pose
   are measurable; depends on the Target QA / keystone gate producing reusable chart geometry
   evidence, so scene-only straight-line bow evidence is not mistaken for calibrated optical

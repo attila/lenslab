@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-vignetting-control";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-copy-assessment-support";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -9,6 +9,7 @@ pub struct AnalyseReport {
     pub tool_version: String,
     pub inputs: Vec<AnalyseInput>,
     pub field_curvature: FieldCurvatureEvidence,
+    pub copy_assessment: CopyAssessmentSupport,
     pub groups: Vec<AnalyseGroup>,
 }
 
@@ -18,6 +19,7 @@ impl AnalyseReport {
         tool_version: impl Into<String>,
         inputs: Vec<AnalyseInput>,
         field_curvature: FieldCurvatureEvidence,
+        copy_assessment: CopyAssessmentSupport,
         groups: Vec<AnalyseGroup>,
     ) -> Self {
         Self {
@@ -25,7 +27,125 @@ impl AnalyseReport {
             tool_version: tool_version.into(),
             inputs,
             field_curvature,
+            copy_assessment,
             groups,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CopyAssessmentSupport {
+    pub state: CopyAssessmentState,
+    pub method: CopyAssessmentMethod,
+    pub hard_support_eligible: bool,
+    pub lens_model: Option<String>,
+    pub focal_length_mm: Option<f32>,
+    pub included_aperture_groups: Vec<f32>,
+    pub evidence: CopyAssessmentEvidence,
+    pub blockers: Vec<CopyAssessmentBlocker>,
+    pub reshoot: Vec<CopyAssessmentReshoot>,
+}
+
+impl CopyAssessmentSupport {
+    #[must_use]
+    pub fn inconclusive(blockers: Vec<CopyAssessmentBlocker>) -> Self {
+        Self::inconclusive_with_evidence(blockers, CopyAssessmentEvidence::not_assessed())
+    }
+
+    #[must_use]
+    pub fn inconclusive_with_evidence(
+        blockers: Vec<CopyAssessmentBlocker>,
+        evidence: CopyAssessmentEvidence,
+    ) -> Self {
+        Self {
+            state: CopyAssessmentState::Inconclusive,
+            method: CopyAssessmentMethod::DerivedFromTargetQaAcutanceAndFieldCurvature,
+            hard_support_eligible: false,
+            lens_model: None,
+            focal_length_mm: None,
+            included_aperture_groups: Vec::new(),
+            evidence,
+            reshoot: reshoot_for_blockers(&blockers),
+            blockers,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CopyAssessmentEvidence {
+    pub target_quality: CopyAssessmentGate,
+    pub correction_provenance: CopyAssessmentGate,
+    pub aperture_series: CopyAssessmentGate,
+    pub left_right_consistency: CopyAssessmentGate,
+    pub field_curvature_counterevidence: CopyAssessmentGate,
+    pub mean_top_pair_delta: Option<DerivedNumericMeasurement>,
+    pub mean_bottom_pair_delta: Option<DerivedNumericMeasurement>,
+    pub max_abs_pair_delta: Option<DerivedNumericMeasurement>,
+    pub centred_threshold: f32,
+    pub decentred_threshold: f32,
+}
+
+impl CopyAssessmentEvidence {
+    #[must_use]
+    pub fn not_assessed() -> Self {
+        Self::not_assessed_with_thresholds(0.0, 0.0)
+    }
+
+    #[must_use]
+    pub fn not_assessed_with_thresholds(centred_threshold: f32, decentred_threshold: f32) -> Self {
+        Self {
+            target_quality: CopyAssessmentGate::blocked(
+                CopyAssessmentBlocker::NoControlledTargetSeries,
+            ),
+            correction_provenance: CopyAssessmentGate::blocked(
+                CopyAssessmentBlocker::NoControlledTargetSeries,
+            ),
+            aperture_series: CopyAssessmentGate::blocked(
+                CopyAssessmentBlocker::NoControlledTargetSeries,
+            ),
+            left_right_consistency: CopyAssessmentGate::blocked(
+                CopyAssessmentBlocker::NoControlledTargetSeries,
+            ),
+            field_curvature_counterevidence: CopyAssessmentGate::blocked(
+                CopyAssessmentBlocker::NoControlledTargetSeries,
+            ),
+            mean_top_pair_delta: None,
+            mean_bottom_pair_delta: None,
+            max_abs_pair_delta: None,
+            centred_threshold,
+            decentred_threshold,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CopyAssessmentGate {
+    pub status: CopyAssessmentGateStatus,
+    pub blockers: Vec<CopyAssessmentBlocker>,
+}
+
+impl CopyAssessmentGate {
+    #[must_use]
+    pub fn passed() -> Self {
+        Self {
+            status: CopyAssessmentGateStatus::Passed,
+            blockers: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn blocked(blocker: CopyAssessmentBlocker) -> Self {
+        Self {
+            status: CopyAssessmentGateStatus::Blocked,
+            blockers: vec![blocker],
+        }
+    }
+
+    #[must_use]
+    pub fn blocked_with(blockers: Vec<CopyAssessmentBlocker>) -> Self {
+        Self {
+            status: CopyAssessmentGateStatus::Blocked,
+            blockers,
         }
     }
 }
@@ -858,6 +978,27 @@ pub enum TargetQaMethod {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum CopyAssessmentState {
+    SupportsCentred,
+    SupportsDecentred,
+    Inconclusive,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CopyAssessmentMethod {
+    DerivedFromTargetQaAcutanceAndFieldCurvature,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CopyAssessmentGateStatus {
+    Passed,
+    Blocked,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FieldCurvatureStatus {
     Supported,
     NotSupported,
@@ -975,6 +1116,37 @@ pub enum TargetQualityBlocker {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum CopyAssessmentBlocker {
+    NoControlledTargetSeries,
+    MixedLensFocalIdentity,
+    MissingLensFocalIdentity,
+    MissingAperture,
+    InsufficientApertureSeries,
+    TargetQualityNotPassed,
+    UnknownCorrections,
+    LowTexture,
+    InsufficientSamples,
+    AmbiguousFieldCurvature,
+    FieldCurvatureCounterevidence,
+    InconsistentAsymmetry,
+    AsymmetryBelowDecentredThreshold,
+    AsymmetryAboveCentredThreshold,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CopyAssessmentReshoot {
+    CaptureControlledTargetApertureSeries,
+    ImproveTargetAlignment,
+    UseUncorrectedRawInput,
+    AddTexturedCornerCoverage,
+    AddRepeatFrames,
+    AddApertureLadder,
+    AddCornerFocusDisambiguator,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TiltAxis {
     Vertical,
     Horizontal,
@@ -1010,6 +1182,58 @@ pub enum ExclusionReason {
     UnstableRepeatOutlier,
 }
 
+pub(crate) fn reshoot_for_blockers(
+    blockers: &[CopyAssessmentBlocker],
+) -> Vec<CopyAssessmentReshoot> {
+    let mut reshoot = Vec::new();
+    for blocker in blockers {
+        match blocker {
+            CopyAssessmentBlocker::NoControlledTargetSeries => push_reshoot(
+                &mut reshoot,
+                CopyAssessmentReshoot::CaptureControlledTargetApertureSeries,
+            ),
+            CopyAssessmentBlocker::TargetQualityNotPassed => {
+                push_reshoot(&mut reshoot, CopyAssessmentReshoot::ImproveTargetAlignment);
+            }
+            CopyAssessmentBlocker::UnknownCorrections => {
+                push_reshoot(&mut reshoot, CopyAssessmentReshoot::UseUncorrectedRawInput);
+            }
+            CopyAssessmentBlocker::LowTexture => {
+                push_reshoot(
+                    &mut reshoot,
+                    CopyAssessmentReshoot::AddTexturedCornerCoverage,
+                );
+            }
+            CopyAssessmentBlocker::InsufficientSamples => {
+                push_reshoot(&mut reshoot, CopyAssessmentReshoot::AddRepeatFrames);
+            }
+            CopyAssessmentBlocker::MissingAperture
+            | CopyAssessmentBlocker::InsufficientApertureSeries => {
+                push_reshoot(&mut reshoot, CopyAssessmentReshoot::AddApertureLadder);
+            }
+            CopyAssessmentBlocker::AmbiguousFieldCurvature
+            | CopyAssessmentBlocker::FieldCurvatureCounterevidence => {
+                push_reshoot(
+                    &mut reshoot,
+                    CopyAssessmentReshoot::AddCornerFocusDisambiguator,
+                );
+            }
+            CopyAssessmentBlocker::MixedLensFocalIdentity
+            | CopyAssessmentBlocker::MissingLensFocalIdentity
+            | CopyAssessmentBlocker::InconsistentAsymmetry
+            | CopyAssessmentBlocker::AsymmetryBelowDecentredThreshold
+            | CopyAssessmentBlocker::AsymmetryAboveCentredThreshold => {}
+        }
+    }
+    reshoot
+}
+
+fn push_reshoot(reshoot: &mut Vec<CopyAssessmentReshoot>, item: CopyAssessmentReshoot) {
+    if !reshoot.contains(&item) {
+        reshoot.push(item);
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TextureMethod {
@@ -1020,16 +1244,17 @@ pub enum TextureMethod {
 mod tests {
     use super::{
         AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralEvidence,
-        CaLateralMeasurements, CorrectionStatus, DecentringEvidence, DerivedNumericMeasurement,
-        DistortionBlocker, DistortionCandidate, DistortionEvidence, DistortionMeasurement,
-        DistortionMeasurements, DistortionOrientation, DistortionReferenceSide, ExclusionCount,
-        ExclusionReason, FieldCurvatureEvidence, FieldCurvatureMethod, FieldCurvatureStatus,
-        FieldCurvatureSummary, FrameMeasurement, FrameQuality, LeftRightDecentring, Measurements,
-        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind,
-        TargetQaEvidence, TargetQaMeasurement, TargetQaMethod, TargetQuality, TargetQualityBlocker,
-        TargetQualityStatus, TiltAxis, VignettingBlocker, VignettingCornerValues,
-        VignettingEvidence, VignettingMeasurements, VignettingMethod, VignettingNumericMeasurement,
-        VignettingSymmetry, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        CaLateralMeasurements, CopyAssessmentBlocker, CopyAssessmentSupport, CorrectionStatus,
+        DecentringEvidence, DerivedNumericMeasurement, DistortionBlocker, DistortionCandidate,
+        DistortionEvidence, DistortionMeasurement, DistortionMeasurements, DistortionOrientation,
+        DistortionReferenceSide, ExclusionCount, ExclusionReason, FieldCurvatureEvidence,
+        FieldCurvatureMethod, FieldCurvatureStatus, FieldCurvatureSummary, FrameMeasurement,
+        FrameQuality, LeftRightDecentring, Measurements, PairId, PairSummary, ReliabilityBlocker,
+        SharpnessMeasurements, SourceKind, TargetQaEvidence, TargetQaMeasurement, TargetQaMethod,
+        TargetQuality, TargetQualityBlocker, TargetQualityStatus, TiltAxis, VignettingBlocker,
+        VignettingCornerValues, VignettingEvidence, VignettingMeasurements, VignettingMethod,
+        VignettingNumericMeasurement, VignettingSymmetry, VignettingZoneMeasurements,
+        ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
@@ -1244,6 +1469,10 @@ mod tests {
         }
     }
 
+    fn copy_assessment() -> CopyAssessmentSupport {
+        CopyAssessmentSupport::inconclusive(vec![CopyAssessmentBlocker::NoControlledTargetSeries])
+    }
+
     #[test]
     fn serialises_confirmed_uncorrected_skeleton_in_field_order() {
         let report = AnalyseReport::new(
@@ -1261,6 +1490,7 @@ mod tests {
                 correction_provenance: None,
             }],
             field_curvature(),
+            copy_assessment(),
             vec![AnalyseGroup {
                 lens_model: Some("50mm".to_owned()),
                 focal_length_mm: Some(50.0),
@@ -1276,13 +1506,14 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-vignetting-control\","));
-        assert_eq!(value["schema_version"], "0.1-vignetting-control");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-copy-assessment-support\","));
+        assert_eq!(value["schema_version"], "0.1-copy-assessment-support");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_report_field_order(&json);
         assert_group_field_order(&json);
         assert_field_curvature_json(&value);
+        assert_copy_assessment_json(&value);
         assert_decentring_json(&value);
         assert_frame_measurement_json(&value);
         assert_vignetting_json(&value);
@@ -1300,6 +1531,13 @@ mod tests {
         assert!(
             json.find("\"field_curvature\"")
                 .expect("field curvature is serialised")
+                < json
+                    .find("\"copy_assessment\"")
+                    .expect("copy assessment is serialised")
+        );
+        assert!(
+            json.find("\"copy_assessment\"")
+                .expect("copy assessment is serialised")
                 < json.find("\"groups\"").expect("groups are serialised")
         );
     }
@@ -1322,6 +1560,29 @@ mod tests {
         assert_eq!(summary["lag_threshold_stops"], 1.75);
         assert_eq!(summary["excluded"][0]["reason"], "unknown_corrections");
         assert!(summary["blockers"].as_array().unwrap().is_empty());
+    }
+
+    fn assert_copy_assessment_json(value: &serde_json::Value) {
+        let support = &value["copy_assessment"];
+        assert_eq!(support["state"], "inconclusive");
+        assert_eq!(
+            support["method"],
+            "derived_from_target_qa_acutance_and_field_curvature"
+        );
+        assert_eq!(support["hard_support_eligible"], false);
+        assert_eq!(support["lens_model"], serde_json::Value::Null);
+        assert_eq!(support["focal_length_mm"], serde_json::Value::Null);
+        assert_eq!(support["blockers"][0], "no_controlled_target_series");
+        assert_eq!(
+            support["reshoot"][0],
+            "capture_controlled_target_aperture_series"
+        );
+        assert_eq!(support["evidence"]["target_quality"]["status"], "blocked");
+        assert_eq!(
+            support["evidence"]["target_quality"]["blockers"][0],
+            "no_controlled_target_series"
+        );
+        assert_eq!(support.get("verdict"), None);
     }
 
     fn assert_group_field_order(json: &str) {
@@ -1574,6 +1835,7 @@ mod tests {
             "0.1.0",
             vec![],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1629,6 +1891,7 @@ mod tests {
             "0.1.0",
             vec![],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![
                 AnalyseGroup {
                     lens_model: None,
@@ -1744,6 +2007,7 @@ mod tests {
             "0.1.0",
             vec![],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![],
         );
         let value: serde_json::Value =
@@ -1772,6 +2036,7 @@ mod tests {
             "0.1.0",
             vec![],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1829,6 +2094,7 @@ mod tests {
                 ),
             }],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1951,6 +2217,7 @@ mod tests {
             "0.1.0",
             vec![],
             FieldCurvatureEvidence::not_assessed(),
+            copy_assessment(),
             vec![
                 AnalyseGroup {
                     lens_model: None,

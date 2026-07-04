@@ -5,6 +5,7 @@ use anyhow::{Context, bail};
 use lenslab_core::channels::{ExtractedCaPlanes, extract_ca_planes, extract_green, extract_luma};
 use lenslab_core::metrics::acutance::measure_acutance;
 use lenslab_core::metrics::ca::{aggregate_group_ca, measure_lateral_ca};
+use lenslab_core::metrics::copy_assessment::assess_copy_support;
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
 use lenslab_core::metrics::distortion::{aggregate_group_distortion, measure_distortion};
 use lenslab_core::metrics::field_curvature::infer_field_curvature;
@@ -71,10 +72,13 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
     let analyse_groups = group_frames(frames)?;
     let field_curvature = infer_field_curvature(&analyse_groups)
         .context("failed to infer field-curvature evidence")?;
+    let copy_assessment = assess_copy_support(&analyse_groups, &field_curvature)
+        .context("failed to assess copy support")?;
     let report = AnalyseReport::new(
         env!("CARGO_PKG_VERSION"),
         inputs,
         field_curvature,
+        copy_assessment,
         analyse_groups,
     );
     let mut output = serde_json::to_vec_pretty(&report)?;
