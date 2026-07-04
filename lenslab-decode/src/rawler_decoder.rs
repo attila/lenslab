@@ -472,7 +472,10 @@ mod tests {
         assert_eq!(info.source_kind, SourceKind::Cfa);
         assert_eq!(info.camera_make.as_deref(), Some("Pentax"));
         assert_eq!(info.camera_model.as_deref(), Some("K-1"));
-        assert_eq!(info.lens_model, None);
+        assert_eq!(
+            info.lens_model.as_deref(),
+            Some("Pentax HD PENTAX-D FA* 50mm F1.4 SDM AW")
+        );
         assert_eq!(info.width, 7392);
         assert_eq!(info.height, 4950);
         assert_eq!(info.bits_per_sample, 14);
