@@ -5,8 +5,15 @@ use crate::image::LinearPatchView;
 use crate::schema::{
     AnalyseGroup, CornerFalloff, ExclusionCount, ExclusionReason, FrameMeasurement,
     VignettingBlocker, VignettingCornerValues, VignettingEvidence, VignettingMethod,
-    VignettingNumericMeasurement, VignettingSymmetry,
+    VignettingNumericMeasurement, VignettingSymmetry, VignettingSymmetryStatus,
 };
+
+const CENTRE_LUMINANCE_DRIFT_LIMIT_STOPS: f32 = 0.25;
+const SAME_APERTURE_CORNER_SCATTER_LIMIT_STOPS: f32 = 0.10;
+const APERTURE_TREND_ALLOWANCE_STOPS: f32 = 0.12;
+const RADIAL_SYMMETRY_MAX_CORNER_RESIDUAL_STOPS: f32 = 0.12;
+const PERSISTENT_LIGHTING_BIAS_FLOOR_STOPS: f32 = 0.15;
+const LIGHTING_BIAS_OPTICAL_RESIDUAL_CEILING_STOPS: f32 = 0.08;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VignettingError {
@@ -110,67 +117,172 @@ pub fn apply_reference_relative_vignetting(
         return Ok(());
     }
 
-    let partitions = collect_partitions(groups);
+    let assessment = assess_controlled_aperture_series(groups)?;
+    if !assessment.blockers.is_empty() {
+        for group in groups {
+            remove_blocker(
+                &mut group.vignetting.blockers,
+                VignettingBlocker::SymmetryNotAssessed,
+            );
+            for blocker in &assessment.blockers {
+                add_blocker(&mut group.vignetting.blockers, *blocker);
+            }
+            group.vignetting.symmetry = VignettingSymmetry {
+                status: VignettingSymmetryStatus::Blocked,
+                blockers: assessment.blockers.clone(),
+                ..VignettingSymmetry::not_assessed()
+            };
+        }
+        return Ok(());
+    }
 
-    for partition in partitions {
-        if partition.members.len() < 2 {
-            for member in partition.members {
-                add_blocker(
-                    &mut groups[member.index].vignetting.blockers,
-                    VignettingBlocker::InsufficientApertureSeries,
-                );
+    let Some(reference_index) = assessment.reference_index else {
+        for group in groups {
+            remove_blocker(
+                &mut group.vignetting.blockers,
+                VignettingBlocker::SymmetryNotAssessed,
+            );
+            if !group.vignetting.blockers.is_empty() {
+                group.vignetting.symmetry = VignettingSymmetry {
+                    status: VignettingSymmetryStatus::Blocked,
+                    blockers: group.vignetting.blockers.clone(),
+                    ..VignettingSymmetry::not_assessed()
+                };
             }
+        }
+        return Ok(());
+    };
+    let reference_f_number = groups[reference_index]
+        .f_number
+        .expect("assessed reference has aperture");
+    let reference_values = groups[reference_index]
+        .vignetting
+        .raw_corner_mean_stops
+        .expect("assessed reference has raw falloff");
+
+    for member in assessment.members {
+        let group = &mut groups[member.index];
+        remove_blocker(
+            &mut group.vignetting.blockers,
+            VignettingBlocker::SymmetryNotAssessed,
+        );
+        group.vignetting.reference_f_number = Some(reference_f_number);
+        if member.index == reference_index {
+            add_blocker(
+                &mut group.vignetting.blockers,
+                VignettingBlocker::ReferenceAperture,
+            );
+            group.vignetting.symmetry = VignettingSymmetry {
+                status: VignettingSymmetryStatus::NotAssessed,
+                blockers: vec![VignettingBlocker::ReferenceAperture],
+                ..VignettingSymmetry::not_assessed()
+            };
             continue;
         }
-        let Some(reference) = partition
-            .members
-            .iter()
-            .max_by(|left, right| left.f_number.total_cmp(&right.f_number))
-        else {
-            continue;
-        };
-        let reference_index = reference.index;
-        let reference_f_number = reference.f_number;
-        let reference_values = reference.raw_corner_mean;
-        for member in partition.members {
-            let group = &mut groups[member.index];
-            group.vignetting.reference_f_number = Some(reference_f_number);
-            if member.index == reference_index {
-                add_blocker(
-                    &mut group.vignetting.blockers,
-                    VignettingBlocker::ReferenceAperture,
-                );
-                continue;
-            }
-            group.vignetting.optical_delta_from_reference_stops = Some(delta_values(
-                member.raw_corner_mean,
-                reference_values,
-                VignettingMethod::ReferenceRelativeApertureDifference,
-            )?);
-        }
+        let delta = delta_values(
+            member.raw_corner_mean,
+            reference_values,
+            VignettingMethod::ReferenceRelativeApertureDifference,
+        )?;
+        group.vignetting.optical_delta_from_reference_stops = Some(delta);
+        group.vignetting.symmetry = classify_symmetry(
+            delta,
+            member.raw_corner_mean,
+            assessment.repeat_scatter_stops,
+        )?;
     }
 
     Ok(())
 }
 
+fn assess_controlled_aperture_series(
+    groups: &mut [AnalyseGroup],
+) -> Result<ControlledAssessment, VignettingError> {
+    let mut blockers = Vec::new();
+    let partitions = collect_partitions(groups);
+    if partitions.len() > 1 {
+        blockers.push(VignettingBlocker::MixedLensFocalIdentity);
+    }
+    for partition in &partitions {
+        if partition.members.len() < 2 {
+            add_blocker(&mut blockers, VignettingBlocker::InsufficientApertureSeries);
+        }
+    }
+    if partitions.len() != 1 || !blockers.is_empty() {
+        return Ok(ControlledAssessment {
+            blockers,
+            members: Vec::new(),
+            reference_index: None,
+            repeat_scatter_stops: None,
+        });
+    }
+
+    let mut members = partitions
+        .into_iter()
+        .next()
+        .expect("one partition")
+        .members;
+    members.sort_by(|left, right| left.f_number.total_cmp(&right.f_number));
+    let mut sanity_blockers = Vec::new();
+    let repeat_scatter = repeat_scatter_stops(groups, &members)?;
+    if repeat_scatter.is_some_and(|scatter| scatter > SAME_APERTURE_CORNER_SCATTER_LIMIT_STOPS) {
+        sanity_blockers.push(VignettingBlocker::UnstableRepeatScatter);
+    }
+    let centre_drift = centre_luminance_drift_stops(groups, &members)?;
+    if centre_drift > CENTRE_LUMINANCE_DRIFT_LIMIT_STOPS {
+        sanity_blockers.push(VignettingBlocker::UnstableCentreLuminance);
+    }
+    if contradicts_aperture_trend(&members) {
+        sanity_blockers.push(VignettingBlocker::ContradictoryApertureTrend);
+    }
+    if !sanity_blockers.is_empty() {
+        return Ok(ControlledAssessment {
+            blockers: sanity_blockers,
+            members: Vec::new(),
+            reference_index: None,
+            repeat_scatter_stops: repeat_scatter,
+        });
+    }
+
+    let reference_index = members.last().map(|member| member.index);
+    Ok(ControlledAssessment {
+        blockers: Vec::new(),
+        members,
+        reference_index,
+        repeat_scatter_stops: repeat_scatter,
+    })
+}
+
 fn collect_partitions(groups: &mut [AnalyseGroup]) -> Vec<Partition> {
     let mut partitions = Vec::new();
     for (index, group) in groups.iter_mut().enumerate() {
-        let (Some(lens_model), Some(focal_length_mm), Some(f_number)) = (
-            group.lens_model.clone(),
-            group.focal_length_mm,
-            group.f_number,
-        ) else {
+        let (Some(lens_model), Some(focal_length_mm)) =
+            (group.lens_model.clone(), group.focal_length_mm)
+        else {
             add_blocker(
                 &mut group.vignetting.blockers,
                 VignettingBlocker::MissingLensFocalIdentity,
             );
             continue;
         };
-        if !focal_length_mm.is_finite() || !f_number.is_finite() {
+        if !focal_length_mm.is_finite() {
             add_blocker(
                 &mut group.vignetting.blockers,
                 VignettingBlocker::MissingLensFocalIdentity,
+            );
+            continue;
+        }
+        let Some(f_number) = group.f_number else {
+            add_blocker(
+                &mut group.vignetting.blockers,
+                VignettingBlocker::MissingAperture,
+            );
+            continue;
+        };
+        if !f_number.is_finite() {
+            add_blocker(
+                &mut group.vignetting.blockers,
+                VignettingBlocker::MissingAperture,
             );
             continue;
         }
@@ -195,6 +307,167 @@ fn collect_partitions(groups: &mut [AnalyseGroup]) -> Vec<Partition> {
         );
     }
     partitions
+}
+
+fn repeat_scatter_stops(
+    groups: &[AnalyseGroup],
+    members: &[PartitionMember],
+) -> Result<Option<f32>, VignettingError> {
+    let mut max_scatter: Option<f32> = None;
+    for member in members {
+        let group = &groups[member.index];
+        let values = group
+            .frames
+            .iter()
+            .filter(|frame| frame.aggregation_eligible)
+            .map(|frame| frame.measurements.vignetting.zones.values())
+            .collect::<Vec<_>>();
+        for values in &values {
+            validate_values(*values)?;
+        }
+        if values.len() < 2 {
+            continue;
+        }
+        for corner_values in [
+            values
+                .iter()
+                .map(|value| value.top_left.value)
+                .collect::<Vec<_>>(),
+            values
+                .iter()
+                .map(|value| value.top_right.value)
+                .collect::<Vec<_>>(),
+            values
+                .iter()
+                .map(|value| value.bottom_left.value)
+                .collect::<Vec<_>>(),
+            values
+                .iter()
+                .map(|value| value.bottom_right.value)
+                .collect::<Vec<_>>(),
+        ] {
+            let scatter = range(&corner_values);
+            max_scatter = Some(max_scatter.map_or(scatter, |max| max.max(scatter)));
+        }
+    }
+    Ok(max_scatter)
+}
+
+fn centre_luminance_drift_stops(
+    groups: &[AnalyseGroup],
+    members: &[PartitionMember],
+) -> Result<f32, VignettingError> {
+    let mut centres = Vec::new();
+    for member in members {
+        for frame in groups[member.index]
+            .frames
+            .iter()
+            .filter(|frame| frame.aggregation_eligible)
+        {
+            let luminance = frame.measurements.sharpness.zones.centre.luminance.value;
+            validate_positive_luminance(luminance)?;
+            centres.push(luminance);
+        }
+    }
+    if centres.len() < 2 {
+        return Ok(0.0);
+    }
+    let min = centres.iter().copied().min_by(f32::total_cmp).unwrap();
+    let max = centres.iter().copied().max_by(f32::total_cmp).unwrap();
+    Ok((max / min).log2())
+}
+
+fn contradicts_aperture_trend(members: &[PartitionMember]) -> bool {
+    members.windows(2).any(|window| {
+        let wider = corner_mean(window[0].raw_corner_mean);
+        let stopped = corner_mean(window[1].raw_corner_mean);
+        stopped + APERTURE_TREND_ALLOWANCE_STOPS < wider
+    })
+}
+
+fn classify_symmetry(
+    delta: VignettingCornerValues,
+    raw: VignettingCornerValues,
+    repeat_scatter_stops: Option<f32>,
+) -> Result<VignettingSymmetry, VignettingError> {
+    let delta_values = corner_array(delta);
+    let mean_delta = delta_values.iter().sum::<f32>() / 4.0;
+    let max_corner_deviation = delta_values
+        .iter()
+        .map(|value| (value - mean_delta).abs())
+        .fold(0.0, f32::max);
+    let left_right = ((delta.top_left.value + delta.bottom_left.value)
+        - (delta.top_right.value + delta.bottom_right.value))
+        / 2.0;
+    let top_bottom = ((delta.top_left.value + delta.top_right.value)
+        - (delta.bottom_left.value + delta.bottom_right.value))
+        / 2.0;
+    let raw_bias = raw_corner_bias(raw);
+    let status = if max_corner_deviation <= LIGHTING_BIAS_OPTICAL_RESIDUAL_CEILING_STOPS
+        && raw_bias >= PERSISTENT_LIGHTING_BIAS_FLOOR_STOPS
+    {
+        VignettingSymmetryStatus::LightingBiased
+    } else if max_corner_deviation <= RADIAL_SYMMETRY_MAX_CORNER_RESIDUAL_STOPS {
+        VignettingSymmetryStatus::RadiallySymmetric
+    } else {
+        VignettingSymmetryStatus::MixedOrUnstable
+    };
+
+    Ok(VignettingSymmetry {
+        status,
+        mean_optical_delta_stops: Some(vignetting_measurement(
+            mean_delta,
+            VignettingMethod::ReferenceRelativeApertureDifference,
+        )?),
+        max_corner_deviation_stops: Some(vignetting_measurement(
+            max_corner_deviation,
+            VignettingMethod::DerivedResidual,
+        )?),
+        left_right_residual_stops: Some(vignetting_measurement(
+            left_right,
+            VignettingMethod::DerivedResidual,
+        )?),
+        top_bottom_residual_stops: Some(vignetting_measurement(
+            top_bottom,
+            VignettingMethod::DerivedResidual,
+        )?),
+        persistent_raw_bias_stops: Some(vignetting_measurement(
+            raw_bias,
+            VignettingMethod::DerivedResidual,
+        )?),
+        repeat_scatter_stops: repeat_scatter_stops
+            .map(|scatter| vignetting_measurement(scatter, VignettingMethod::DerivedRepeatScatter))
+            .transpose()?,
+        blockers: Vec::new(),
+    })
+}
+
+fn corner_mean(values: VignettingCornerValues) -> f32 {
+    corner_array(values).iter().sum::<f32>() / 4.0
+}
+
+fn raw_corner_bias(values: VignettingCornerValues) -> f32 {
+    let values = corner_array(values);
+    let mean = values.iter().sum::<f32>() / 4.0;
+    values
+        .iter()
+        .map(|value| (value - mean).abs())
+        .fold(0.0, f32::max)
+}
+
+fn corner_array(values: VignettingCornerValues) -> [f32; 4] {
+    [
+        values.top_left.value,
+        values.top_right.value,
+        values.bottom_left.value,
+        values.bottom_right.value,
+    ]
+}
+
+fn range(values: &[f32]) -> f32 {
+    let min = values.iter().copied().min_by(f32::total_cmp).unwrap();
+    let max = values.iter().copied().max_by(f32::total_cmp).unwrap();
+    max - min
 }
 
 fn push_partition_member(
@@ -279,6 +552,13 @@ struct PartitionMember {
     index: usize,
     f_number: f32,
     raw_corner_mean: VignettingCornerValues,
+}
+
+struct ControlledAssessment {
+    blockers: Vec<VignettingBlocker>,
+    members: Vec<PartitionMember>,
+    reference_index: Option<usize>,
+    repeat_scatter_stops: Option<f32>,
 }
 
 fn validate_positive_luminance(value: f32) -> Result<(), VignettingError> {
@@ -386,6 +666,10 @@ fn add_blocker(blockers: &mut Vec<VignettingBlocker>, blocker: VignettingBlocker
     }
 }
 
+fn remove_blocker(blockers: &mut Vec<VignettingBlocker>, blocker: VignettingBlocker) {
+    blockers.retain(|existing| *existing != blocker);
+}
+
 impl CornerFalloff {
     #[must_use]
     pub fn value(&self) -> f32 {
@@ -405,8 +689,8 @@ mod tests {
         DecentringEvidence, ExclusionReason, FrameMeasurement, FrameQuality, LeftRightDecentring,
         Measurements, PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements,
         TargetQualityBlocker, VignettingBlocker, VignettingCornerValues, VignettingMeasurements,
-        VignettingNumericMeasurement, VignettingZoneMeasurements, ZoneMeasurement,
-        ZoneMeasurements,
+        VignettingNumericMeasurement, VignettingSymmetryStatus, VignettingZoneMeasurements,
+        ZoneMeasurement, ZoneMeasurements,
     };
 
     fn patch(samples: Vec<f32>) -> LinearImage {
@@ -462,7 +746,11 @@ mod tests {
     }
 
     fn zone() -> ZoneMeasurement {
-        ZoneMeasurement::measured(1.0, 0.2, 1.0, true).unwrap()
+        zone_with_luminance(1.0)
+    }
+
+    fn zone_with_luminance(luminance: f32) -> ZoneMeasurement {
+        ZoneMeasurement::measured(1.0, 0.2, luminance, true).unwrap()
     }
 
     fn values(
@@ -480,7 +768,16 @@ mod tests {
     }
 
     fn frame(eligible: bool, falloff: VignettingCornerValues) -> FrameMeasurement {
+        frame_with_centre_luminance(eligible, falloff, 1.0)
+    }
+
+    fn frame_with_centre_luminance(
+        eligible: bool,
+        falloff: VignettingCornerValues,
+        centre_luminance: f32,
+    ) -> FrameMeasurement {
         let zone = zone();
+        let centre_zone = zone_with_luminance(centre_luminance);
         FrameMeasurement {
             input_index: 0,
             path: "frame.tif".to_owned(),
@@ -489,7 +786,7 @@ mod tests {
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([
-                        zone.clone(),
+                        centre_zone,
                         zone.clone(),
                         zone.clone(),
                         zone.clone(),
@@ -541,6 +838,10 @@ mod tests {
 
     fn group(f_number: f32, falloff: VignettingCornerValues) -> AnalyseGroup {
         let frames = vec![frame(true, falloff)];
+        group_with_frames(f_number, frames)
+    }
+
+    fn group_with_frames(f_number: f32, frames: Vec<FrameMeasurement>) -> AnalyseGroup {
         AnalyseGroup {
             lens_model: Some("50mm".to_owned()),
             focal_length_mm: Some(50.0),
@@ -594,6 +895,10 @@ mod tests {
             .unwrap();
         assert_close(delta.top_left.value, -0.8);
         assert_close(delta.bottom_right.value, -0.5);
+        assert_eq!(
+            groups[0].vignetting.symmetry.status,
+            VignettingSymmetryStatus::MixedOrUnstable
+        );
         assert!(
             groups[1]
                 .vignetting
@@ -628,11 +933,67 @@ mod tests {
         apply_reference_relative_vignetting(&mut groups, true).expect("identity blockers");
 
         for group in groups {
+            assert!(group.vignetting.reference_f_number.is_none());
+            assert!(
+                group
+                    .vignetting
+                    .optical_delta_from_reference_stops
+                    .is_none()
+            );
+            assert_eq!(
+                group.vignetting.symmetry.status,
+                VignettingSymmetryStatus::Blocked
+            );
+            assert!(
+                !group
+                    .vignetting
+                    .blockers
+                    .contains(&VignettingBlocker::SymmetryNotAssessed)
+            );
+        }
+    }
+
+    #[test]
+    fn mixed_lens_focal_candidate_set_blocks_controlled_vignetting() {
+        let mut other_lens = group(11.0, values(-0.4, -0.4, -0.4, -0.4));
+        other_lens.lens_model = Some("35mm".to_owned());
+        let mut groups = vec![stale_delta_group(), other_lens];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("mixed identity");
+
+        for group in groups {
             assert!(
                 group
                     .vignetting
                     .blockers
-                    .contains(&VignettingBlocker::MissingLensFocalIdentity)
+                    .contains(&VignettingBlocker::MixedLensFocalIdentity)
+            );
+            assert!(group.vignetting.reference_f_number.is_none());
+            assert!(
+                group
+                    .vignetting
+                    .optical_delta_from_reference_stops
+                    .is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn missing_and_non_finite_aperture_use_aperture_blocker() {
+        let mut missing_aperture = stale_delta_group();
+        missing_aperture.f_number = None;
+        let mut non_finite_aperture = stale_delta_group();
+        non_finite_aperture.f_number = Some(f32::NAN);
+        let mut groups = vec![missing_aperture, non_finite_aperture];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("aperture blockers");
+
+        for group in groups {
+            assert!(
+                group
+                    .vignetting
+                    .blockers
+                    .contains(&VignettingBlocker::MissingAperture)
             );
             assert!(group.vignetting.reference_f_number.is_none());
             assert!(
@@ -691,6 +1052,130 @@ mod tests {
                 .contains(&VignettingBlocker::InsufficientApertureSeries)
         );
         assert!(groups[0].vignetting.reference_f_number.is_none());
+        assert!(
+            groups[0]
+                .vignetting
+                .optical_delta_from_reference_stops
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn radially_symmetric_optical_delta_emits_numeric_evidence() {
+        let mut groups = vec![
+            group(4.0, values(-1.2, -1.2, -1.2, -1.2)),
+            group(11.0, values(-0.4, -0.4, -0.4, -0.4)),
+        ];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("reference deltas");
+
+        let symmetry = &groups[0].vignetting.symmetry;
+        assert_eq!(symmetry.status, VignettingSymmetryStatus::RadiallySymmetric);
+        assert_close(symmetry.mean_optical_delta_stops.unwrap().value, -0.8);
+        assert_close(symmetry.max_corner_deviation_stops.unwrap().value, 0.0);
+        assert!(symmetry.blockers.is_empty());
+    }
+
+    #[test]
+    fn fixed_raw_bias_that_cancels_in_delta_is_lighting_biased() {
+        let mut groups = vec![
+            group(4.0, values(-1.2, -1.0, -1.0, -1.0)),
+            group(11.0, values(-0.4, -0.2, -0.2, -0.2)),
+        ];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("reference deltas");
+
+        let symmetry = &groups[0].vignetting.symmetry;
+        assert_eq!(symmetry.status, VignettingSymmetryStatus::LightingBiased);
+        assert_close(symmetry.mean_optical_delta_stops.unwrap().value, -0.8);
+        assert!(symmetry.persistent_raw_bias_stops.unwrap().value >= 0.15);
+    }
+
+    #[test]
+    fn repeat_scatter_above_threshold_blocks_optical_delta() {
+        let noisy = group_with_frames(
+            4.0,
+            vec![
+                frame(true, values(-1.2, -1.2, -1.2, -1.2)),
+                frame(true, values(-1.31, -1.2, -1.2, -1.2)),
+            ],
+        );
+        let mut groups = vec![noisy, group(11.0, values(-0.4, -0.4, -0.4, -0.4))];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("scatter blocker");
+
+        for group in groups {
+            assert!(
+                group
+                    .vignetting
+                    .blockers
+                    .contains(&VignettingBlocker::UnstableRepeatScatter)
+            );
+            assert_eq!(
+                group.vignetting.symmetry.status,
+                VignettingSymmetryStatus::Blocked
+            );
+            assert!(
+                group
+                    .vignetting
+                    .optical_delta_from_reference_stops
+                    .is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn centre_luminance_drift_above_threshold_blocks_optical_delta() {
+        let mut groups = vec![
+            group_with_frames(
+                4.0,
+                vec![frame_with_centre_luminance(
+                    true,
+                    values(-1.2, -1.2, -1.2, -1.2),
+                    1.0,
+                )],
+            ),
+            group_with_frames(
+                11.0,
+                vec![frame_with_centre_luminance(
+                    true,
+                    values(-0.4, -0.4, -0.4, -0.4),
+                    1.3,
+                )],
+            ),
+        ];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("centre drift blocker");
+
+        assert!(
+            groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::UnstableCentreLuminance)
+        );
+        assert!(
+            groups[0]
+                .vignetting
+                .optical_delta_from_reference_stops
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn contradictory_aperture_trend_blocks_optical_delta() {
+        let mut groups = vec![
+            group(4.0, values(-0.4, -0.4, -0.4, -0.4)),
+            group(11.0, values(-0.7, -0.7, -0.7, -0.7)),
+        ];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("trend blocker");
+
+        assert!(
+            groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::ContradictoryApertureTrend)
+        );
         assert!(
             groups[0]
                 .vignetting

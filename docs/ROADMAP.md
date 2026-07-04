@@ -13,15 +13,13 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
-  into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
-  controlled.
-
-## Remaining v0.1 Measurement Backlog
-
 - **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
   centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
   narrative judgement in the plugin.
+
+## Remaining v0.1 Measurement Backlog
+
+- _(none queued beyond Up Next)_
 
 ## Product-Grade Blockers
 
@@ -45,6 +43,11 @@ acceptance criteria are met.
   fixture sets assert known MTF/vignetting/CA/distortion/keystone/aperture-series values within
   documented tolerances, and byte-stable golden JSON snapshots catch accidental public-contract
   drift.
+- **Vignetting threshold calibration** — the controlled-series and symmetry thresholds should be
+  tuned against synthetic boundary cases and the local real aperture-ladder pool after the first
+  conservative implementation lands. _Done when:_ each threshold has a named product meaning,
+  synthetic boundary fixtures around pass/fail edges, local real-capture evidence from at least one
+  prominent-vignetting lens, and documented changes when the defaults move.
 
 ## In Progress
 
@@ -153,6 +156,16 @@ acceptance criteria are met.
   schema, core, CLI, deterministic-output, stdout-empty failure, and real-fixture tests cover
   passed, gated, blocked, unknown-correction, and corrected-input rejection paths — met by this
   change.
+- **Controlled vignetting reference + symmetry assessment** — `lenslab analyse <paths…>` emits
+  schema `0.1-vignetting-control` with controlled same-lens/same-focal aperture-series optical
+  deltas, reference-aperture labelling, product-readable symmetry status, and numeric residual
+  evidence. Missing or unstable metadata, unknown corrections, centre-luminance drift, repeat
+  scatter, mixed identity, and contradictory aperture trends block optical deltas. It still emits no
+  lens-copy verdict, plugin interpretation, report artefacts, public threshold configuration, or
+  calibrated absolute vignetting claim. _Done when:_ synthetic oracle tests cover exact deltas,
+  fixed-bias cancellation, threshold blockers, deterministic JSON, and verdict omissions; decoded
+  TIFF tests keep unknown-correction exclusion honest; `just test-local-vignetting` provides a
+  local-only real-DNG gate that skips when unconfigured — met by this change.
 
 ## Deferred / known gaps
 

@@ -286,7 +286,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(json["schema_version"], "0.1-vignetting-control");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -439,7 +439,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(json["schema_version"], "0.1-vignetting-control");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -470,7 +470,7 @@ fn analyse_reports_synthetic_distortion_bow_candidate() {
     let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
     let candidate = &distortion["candidate"];
 
-    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(json["schema_version"], "0.1-vignetting-control");
     assert_eq!(candidate["orientation"], "horizontal");
     assert_eq!(candidate["reference_side"], "top");
     assert_eq!(candidate["bow"]["unit"], "percent_frame");
@@ -551,7 +551,7 @@ fn analyse_reports_frame_level_gated_target_qa_for_periodic_tiff() {
     let frame_target = &json["groups"][0]["frames"][0]["qa"]["target"];
     let group_target = &json["groups"][0]["decentring"]["target_quality"];
 
-    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(json["schema_version"], "0.1-vignetting-control");
     assert_eq!(frame_target["status"], "gated");
     assert_eq!(frame_target["method"], "measured_periodic_reference_scale");
     assert_eq!(frame_target["tilt_axis"], "vertical");
@@ -750,7 +750,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(json["schema_version"], "0.1-vignetting-control");
     assert_ne!(json["schema_version"], "1.0");
 }
 

@@ -361,7 +361,7 @@ fn group_frames(frames: Vec<AnalysedFrame>) -> anyhow::Result<Vec<AnalyseGroup>>
             frames: group.frames,
         });
     }
-    apply_reference_relative_vignetting(&mut analyse_groups, false)
+    apply_reference_relative_vignetting(&mut analyse_groups, true)
         .context("failed to aggregate reference-relative vignetting evidence")?;
     Ok(analyse_groups)
 }
@@ -387,6 +387,15 @@ mod tests {
     }
 
     fn frame_with_sharpness(input_index: usize, centre: f32, corners: f32) -> FrameMeasurement {
+        frame_with_sharpness_and_falloff(input_index, centre, corners, -1.0)
+    }
+
+    fn frame_with_sharpness_and_falloff(
+        input_index: usize,
+        centre: f32,
+        corners: f32,
+        falloff_stops: f32,
+    ) -> FrameMeasurement {
         let centre_zone = ZoneMeasurement::measured(centre, 0.2, 1.0, true).unwrap();
         let corner_zone = ZoneMeasurement::measured(corners, 0.2, 1.0, true).unwrap();
         FrameMeasurement {
@@ -406,10 +415,10 @@ mod tests {
                 },
                 vignetting: VignettingMeasurements {
                     zones: VignettingZoneMeasurements {
-                        top_left: falloff(-1.0),
-                        top_right: falloff(-1.0),
-                        bottom_left: falloff(-1.0),
-                        bottom_right: falloff(-1.0),
+                        top_left: falloff(falloff_stops),
+                        top_right: falloff(falloff_stops),
+                        bottom_left: falloff(falloff_stops),
+                        bottom_right: falloff(falloff_stops),
                     },
                 },
                 ca_lateral: CaLateralMeasurements::blocked_all(CaBlocker::FlatProfile),
@@ -445,6 +454,17 @@ mod tests {
         }
     }
 
+    fn analysed_frame_with_falloff(
+        input_index: usize,
+        key: GroupKey,
+        falloff_stops: f32,
+    ) -> AnalysedFrame {
+        AnalysedFrame {
+            key,
+            measurement: frame_with_sharpness_and_falloff(input_index, 1.0, 1.0, falloff_stops),
+        }
+    }
+
     #[test]
     fn grouping_preserves_first_seen_order_and_exact_non_null_equality() {
         let first_key = GroupKey {
@@ -469,9 +489,12 @@ mod tests {
         assert_eq!(groups[0].lens_model.as_deref(), Some("50mm"));
         assert_eq!(groups[0].frames[0].input_index, 0);
         assert_eq!(groups[0].frames[1].input_index, 2);
-        assert!(groups[0].vignetting.blockers.contains(
-            &lenslab_core::schema::VignettingBlocker::ControlledApertureSeriesNotAssessed
-        ));
+        assert!(
+            groups[0]
+                .vignetting
+                .blockers
+                .contains(&lenslab_core::schema::VignettingBlocker::MixedLensFocalIdentity)
+        );
         assert_eq!(groups[1].lens_model.as_deref(), Some("35mm"));
         assert_eq!(groups[1].frames[0].input_index, 1);
     }
@@ -521,5 +544,50 @@ mod tests {
         );
         assert_eq!(evidence.summaries[0].centre_peak_f_number, Some(5.6));
         assert_eq!(evidence.summaries[0].corner_mean_peak_f_number, Some(11.0));
+    }
+
+    #[test]
+    fn grouped_confirmed_uncorrected_aperture_series_emits_optical_vignetting_delta() {
+        let lens = Some("50mm".to_owned());
+        let groups = group_frames(vec![
+            analysed_frame_with_falloff(
+                0,
+                GroupKey {
+                    lens_model: lens.clone(),
+                    focal_length_mm: Some(50.0),
+                    f_number: Some(4.0),
+                },
+                -1.2,
+            ),
+            analysed_frame_with_falloff(
+                1,
+                GroupKey {
+                    lens_model: lens,
+                    focal_length_mm: Some(50.0),
+                    f_number: Some(11.0),
+                },
+                -0.4,
+            ),
+        ])
+        .unwrap();
+
+        assert_eq!(groups[0].vignetting.reference_f_number, Some(11.0));
+        let delta = groups[0]
+            .vignetting
+            .optical_delta_from_reference_stops
+            .unwrap()
+            .top_left
+            .value;
+        assert!((delta - -0.8).abs() <= 1.0e-6);
+        assert_eq!(
+            groups[0].vignetting.symmetry.status,
+            lenslab_core::schema::VignettingSymmetryStatus::RadiallySymmetric
+        );
+        assert!(
+            groups[1]
+                .vignetting
+                .blockers
+                .contains(&lenslab_core::schema::VignettingBlocker::ReferenceAperture)
+        );
     }
 }

@@ -27,6 +27,10 @@ test-fixtures: fixtures
     cargo test -p lenslab-decode --features real-fixtures
     cargo test -p lenslab-cli --features real-fixtures
 
+# Run local-only controlled vignetting validation.
+test-local-vignetting:
+    cargo test -p lenslab-cli --test local_vignetting_cli -- --ignored --nocapture
+
 # Run dependency audits
 #
 # `GIT_CONFIG_*` overrides neutralise URL rewrites before gix (used by

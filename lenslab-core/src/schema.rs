@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-target-qa";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-vignetting-control";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -718,6 +718,12 @@ pub struct VignettingEvidence {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VignettingSymmetry {
     pub status: VignettingSymmetryStatus,
+    pub mean_optical_delta_stops: Option<VignettingNumericMeasurement>,
+    pub max_corner_deviation_stops: Option<VignettingNumericMeasurement>,
+    pub left_right_residual_stops: Option<VignettingNumericMeasurement>,
+    pub top_bottom_residual_stops: Option<VignettingNumericMeasurement>,
+    pub persistent_raw_bias_stops: Option<VignettingNumericMeasurement>,
+    pub repeat_scatter_stops: Option<VignettingNumericMeasurement>,
     pub blockers: Vec<VignettingBlocker>,
 }
 
@@ -726,6 +732,12 @@ impl VignettingSymmetry {
     pub fn not_assessed() -> Self {
         Self {
             status: VignettingSymmetryStatus::NotAssessed,
+            mean_optical_delta_stops: None,
+            max_corner_deviation_stops: None,
+            left_right_residual_stops: None,
+            top_bottom_residual_stops: None,
+            persistent_raw_bias_stops: None,
+            repeat_scatter_stops: None,
             blockers: vec![VignettingBlocker::SymmetryNotAssessed],
         }
     }
@@ -813,6 +825,8 @@ pub enum DecentringMethod {
 pub enum VignettingMethod {
     MeasuredLuminanceRatio,
     ReferenceRelativeApertureDifference,
+    DerivedResidual,
+    DerivedRepeatScatter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -906,8 +920,13 @@ pub enum CaBlocker {
 pub enum VignettingBlocker {
     InsufficientApertureSeries,
     MissingLensFocalIdentity,
+    MissingAperture,
+    MixedLensFocalIdentity,
     ControlledApertureSeriesNotAssessed,
     UnknownCorrections,
+    UnstableCentreLuminance,
+    UnstableRepeatScatter,
+    ContradictoryApertureTrend,
     SymmetryNotAssessed,
     ReferenceAperture,
 }
@@ -916,6 +935,10 @@ pub enum VignettingBlocker {
 #[serde(rename_all = "snake_case")]
 pub enum VignettingSymmetryStatus {
     NotAssessed,
+    RadiallySymmetric,
+    LightingBiased,
+    MixedOrUnstable,
+    Blocked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -1242,8 +1265,8 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-target-qa\","));
-        assert_eq!(value["schema_version"], "0.1-target-qa");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-vignetting-control\","));
+        assert_eq!(value["schema_version"], "0.1-vignetting-control");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_report_field_order(&json);
@@ -1456,6 +1479,30 @@ mod tests {
         assert_eq!(
             value["groups"][0]["vignetting"]["symmetry"]["status"],
             "not_assessed"
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["mean_optical_delta_stops"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["max_corner_deviation_stops"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["left_right_residual_stops"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["top_bottom_residual_stops"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["persistent_raw_bias_stops"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["vignetting"]["symmetry"]["repeat_scatter_stops"],
+            serde_json::Value::Null
         );
     }
 
