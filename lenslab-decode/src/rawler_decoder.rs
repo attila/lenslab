@@ -4,8 +4,11 @@ use lenslab_core::image::{
     BayerPattern, BlackWhiteLevels, CfaImage, CfaPattern, CfaSamples, CorrectionProvenance,
     Dimensions, LinearityProvenance, Provenance, RgbImage,
 };
+use rawler::decoders::pef::PefMakernote;
 use rawler::decoders::{Decoder as RawlerTrait, RawDecodeParams, RawMetadata, WellKnownIFD};
-use rawler::formats::tiff::Rational;
+use rawler::formats::tiff::ifd::OffsetMode;
+use rawler::formats::tiff::{Rational, Value};
+use rawler::lens::LensResolver;
 use rawler::rawimage::RawPhotometricInterpretation;
 use rawler::rawsource::RawSource;
 use rawler::tags::DngTag;
@@ -35,6 +38,8 @@ impl Decoder for RawlerDecoder {
             .map_err(|source| DecodeError::rawler(path, source))?;
 
         Ok(rawler_frame_info(
+            &source,
+            decoder.as_ref(),
             &image,
             &metadata,
             dng_corrections(decoder.as_ref()),
@@ -53,7 +58,13 @@ impl Decoder for RawlerDecoder {
             .raw_metadata(&source, &params)
             .map_err(|source| DecodeError::rawler(path, source))?;
         let corrections = dng_corrections(decoder.as_ref());
-        let info = rawler_frame_info(&image, &metadata, corrections.clone());
+        let info = rawler_frame_info(
+            &source,
+            decoder.as_ref(),
+            &image,
+            &metadata,
+            corrections.clone(),
+        );
         let provenance = rawler_provenance(&corrections);
         let dimensions = Dimensions::new(image.width, image.height)
             .map_err(|source| DecodeError::image(path, source))?;
@@ -108,6 +119,8 @@ impl Decoder for RawlerDecoder {
 }
 
 fn rawler_frame_info(
+    source: &RawSource,
+    decoder: &dyn RawlerTrait,
     image: &rawler::RawImage,
     metadata: &RawMetadata,
     corrections: Corrections,
@@ -123,7 +136,8 @@ fn rawler_frame_info(
         .lens
         .as_ref()
         .map(|lens| lens.lens_name.clone())
-        .or_else(|| metadata.exif.lens_model.as_deref().and_then(non_empty));
+        .or_else(|| metadata.exif.lens_model.as_deref().and_then(non_empty))
+        .or_else(|| pentax_makernote_lens_model(source, decoder));
 
     FrameInfo {
         source_kind,
@@ -169,6 +183,87 @@ fn rawler_frame_info(
         },
         corrections,
     }
+}
+
+fn pentax_makernote_lens_model(source: &RawSource, decoder: &dyn RawlerTrait) -> Option<String> {
+    if let Some(model) = pentax_dng_makernote_lens_model(decoder) {
+        return Some(model);
+    }
+
+    let exif = decoder.ifd(WellKnownIFD::Exif).ok().flatten()?;
+    let makernote = exif
+        .parse_makernote(&mut source.reader(), OffsetMode::Absolute, &[])
+        .ok()
+        .flatten()?;
+    let settings = match &makernote.get_entry(PefMakernote::LensRec)?.value {
+        Value::Byte(settings) if settings.len() >= 2 => settings,
+        _ => return None,
+    };
+    pentax_lens_model_from_lens_rec(settings[0], settings[1])
+}
+
+fn pentax_dng_makernote_lens_model(decoder: &dyn RawlerTrait) -> Option<String> {
+    let root = decoder.ifd(WellKnownIFD::Root).ok().flatten()?;
+    let (Value::Byte(data) | Value::Undefined(data)) = &root.get_entry(0xc634u16)?.value else {
+        return None;
+    };
+    let (lens_id, lens_subid) = pentax_makernote_lens_rec(data)?;
+    pentax_lens_model_from_lens_rec(lens_id, lens_subid)
+}
+
+fn pentax_makernote_lens_rec(data: &[u8]) -> Option<(u8, u8)> {
+    if data.len() < 12 || !data.starts_with(b"PENTAX") {
+        return None;
+    }
+    let little_endian = match data.get(8..10)? {
+        b"II" => true,
+        b"MM" => false,
+        _ => return None,
+    };
+    let entry_count = read_u16(data, 10, little_endian)? as usize;
+    let entries_start = 12usize;
+
+    for entry_index in 0..entry_count {
+        let offset = entries_start.checked_add(entry_index.checked_mul(12)?)?;
+        let tag = read_u16(data, offset, little_endian)?;
+        let field_count = read_u32(data, offset + 4, little_endian)?;
+        if tag == 0x003f && field_count >= 2 {
+            let settings = data.get(offset + 8..offset + 12)?;
+            return Some((settings[0], settings[1]));
+        }
+    }
+
+    None
+}
+
+fn read_u16(data: &[u8], offset: usize, little_endian: bool) -> Option<u16> {
+    let bytes: [u8; 2] = data.get(offset..offset + 2)?.try_into().ok()?;
+    Some(if little_endian {
+        u16::from_le_bytes(bytes)
+    } else {
+        u16::from_be_bytes(bytes)
+    })
+}
+
+fn read_u32(data: &[u8], offset: usize, little_endian: bool) -> Option<u32> {
+    let bytes: [u8; 4] = data.get(offset..offset + 4)?.try_into().ok()?;
+    Some(if little_endian {
+        u32::from_le_bytes(bytes)
+    } else {
+        u32::from_be_bytes(bytes)
+    })
+}
+
+fn pentax_lens_model_from_lens_rec(lens_id: u8, lens_subid: u8) -> Option<String> {
+    if [0, 1, 2].contains(&lens_id) {
+        return None;
+    }
+
+    LensResolver::new()
+        .with_lens_id((u32::from(lens_id), u32::from(lens_subid)))
+        .with_mounts(&["k-mount".to_owned()])
+        .resolve()
+        .map(|lens| lens.lens_name.clone())
 }
 
 fn rawler_provenance(corrections: &Corrections) -> Provenance {
@@ -276,7 +371,7 @@ mod tests {
 
     #[cfg(feature = "real-fixtures")]
     use super::RawlerDecoder;
-    use super::non_empty;
+    use super::{non_empty, pentax_lens_model_from_lens_rec, pentax_makernote_lens_rec};
 
     #[test]
     fn non_empty_trims_the_returned_value() {
@@ -287,6 +382,26 @@ mod tests {
     fn non_empty_treats_whitespace_only_as_absent() {
         assert_eq!(non_empty("   "), None);
         assert_eq!(non_empty(""), None);
+    }
+
+    #[test]
+    fn pentax_lens_rec_resolves_k_mount_catalogue_name() {
+        assert_eq!(
+            pentax_lens_model_from_lens_rec(4, 3).as_deref(),
+            Some("Pentax smc PENTAX-FA 43mm F1.9 Limited")
+        );
+    }
+
+    #[test]
+    fn pentax_makernote_lens_rec_reads_inline_lens_type() {
+        let mut data = b"PENTAX \0II".to_vec();
+        data.extend_from_slice(&1u16.to_le_bytes());
+        data.extend_from_slice(&0x003fu16.to_le_bytes());
+        data.extend_from_slice(&1u16.to_le_bytes());
+        data.extend_from_slice(&4u32.to_le_bytes());
+        data.extend_from_slice(&[4, 3, 0, 0]);
+
+        assert_eq!(pentax_makernote_lens_rec(&data), Some((4, 3)));
     }
 
     #[cfg(feature = "real-fixtures")]
@@ -357,7 +472,10 @@ mod tests {
         assert_eq!(info.source_kind, SourceKind::Cfa);
         assert_eq!(info.camera_make.as_deref(), Some("Pentax"));
         assert_eq!(info.camera_model.as_deref(), Some("K-1"));
-        assert_eq!(info.lens_model, None);
+        assert_eq!(
+            info.lens_model.as_deref(),
+            Some("Pentax HD PENTAX-D FA* 50mm F1.4 SDM AW")
+        );
         assert_eq!(info.width, 7392);
         assert_eq!(info.height, 4950);
         assert_eq!(info.bits_per_sample, 14);

@@ -13,15 +13,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
-  into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
-  controlled.
+- **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
+  centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
+  narrative judgement in the plugin. Include a real controlled copy-test validation slice covering
+  decentring, target QA, and sharpness/acutance together, so the first hard-verdict boundary is
+  checked against realistic capture variation rather than synthetic fixtures alone.
 
 ## Remaining v0.1 Measurement Backlog
 
-- **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
-  centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
-  narrative judgement in the plugin.
+- _(none queued beyond Up Next)_
 
 ## Product-Grade Blockers
 
@@ -45,6 +45,11 @@ acceptance criteria are met.
   fixture sets assert known MTF/vignetting/CA/distortion/keystone/aperture-series values within
   documented tolerances, and byte-stable golden JSON snapshots catch accidental public-contract
   drift.
+- **Vignetting threshold calibration** — the controlled-series and symmetry thresholds should be
+  tuned against synthetic boundary cases and the local real aperture-ladder pool after the first
+  conservative implementation lands. _Done when:_ each threshold has a named product meaning,
+  synthetic boundary fixtures around pass/fail edges, local real-capture evidence from at least one
+  prominent-vignetting lens, and documented changes when the defaults move.
 
 ## In Progress
 
@@ -153,6 +158,16 @@ acceptance criteria are met.
   schema, core, CLI, deterministic-output, stdout-empty failure, and real-fixture tests cover
   passed, gated, blocked, unknown-correction, and corrected-input rejection paths — met by this
   change.
+- **Controlled vignetting reference + symmetry assessment** — `lenslab analyse <paths…>` emits
+  schema `0.1-vignetting-control` with controlled same-lens/same-focal aperture-series optical
+  deltas, reference-aperture labelling, product-readable symmetry status, and numeric residual
+  evidence. Missing or unstable metadata, unknown corrections, centre-luminance drift, repeat
+  scatter, mixed identity, and contradictory aperture trends block optical deltas. It still emits no
+  lens-copy verdict, plugin interpretation, report artefacts, public threshold configuration, or
+  calibrated absolute vignetting claim. _Done when:_ synthetic oracle tests cover exact deltas,
+  fixed-bias cancellation, threshold blockers, deterministic JSON, and verdict omissions; decoded
+  TIFF tests keep unknown-correction exclusion honest; `just test-local-vignetting` provides a
+  local-only real-DNG gate that skips when unconfigured — met by this change.
 
 ## Deferred / known gaps
 
@@ -212,6 +227,14 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   known MTF, vignetting, CA, distortion, keystone, and aperture-series behaviours, then assert
   measured values within documented tolerances, backed by golden JSON snapshots for schema
   evolution, so metric evidence is calibrated beyond schema and blocker correctness.
+- **Manual-lens aperture input for controlled series** — old manual-focus lenses may not disclose
+  aperture metadata at all, but a user-supplied controlled series should still be analysable when
+  the capture order or sidecar data provides the aperture ladder. Do not keep missing EXIF aperture
+  as a hard blocker once the product has an explicit way to accept user-confirmed aperture values.
+  _Done when:_ guided capture or sidecar/override input can bind frames to aperture values, the JSON
+  distinguishes user-supplied aperture from measured EXIF aperture, missing camera metadata is a
+  warning rather than a blocker for those confirmed series, and tests cover manual-lens DNGs with no
+  aperture tags.
 - **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
   deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
   `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
