@@ -2,8 +2,8 @@
 
 ## Status
 
-lenslab is pre-implementation. This document states the intended threat model and how to report
-issues; specific mitigations will be documented here as the code lands.
+lenslab is pre-release but no longer pre-implementation. This document states the current threat
+model and how to report issues; specific mitigations should be kept current as code lands.
 
 ## Threat model
 
@@ -14,8 +14,8 @@ Claude plugin orchestrates the same local binary.
 The primary surface is **untrusted input files**: lenslab decodes DNG/TIFF/raw frames, and a
 malformed or hostile file is the realistic attack vector.
 
-- **Decoder robustness** — raw/TIFF parsing (via `rawler`/`rawloader` in `lenslab-decode`) is the
-  main surface. A crafted file should fail cleanly, not crash, hang, or read out of bounds.
+- **Decoder robustness** — raw/TIFF parsing (via `rawler` and the `tiff` crate in `lenslab-decode`)
+  is the main surface. A crafted file should fail cleanly, not crash, hang, or read out of bounds.
 - **Resource exhaustion** — oversized or pathological frames driving unbounded memory or time.
 - **Path handling** — input folders and output artefact paths must stay within the directories the
   user named: no traversal, no writes outside the output target.

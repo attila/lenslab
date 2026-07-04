@@ -84,11 +84,13 @@ fail squareness/shake thresholds (reported, not silently dropped).
 ## 5. CLI surface
 
 Current implementation note: the shipped `analyse` command is a narrow explicit-file skeleton:
-`lenslab analyse <paths…>` emits pretty JSON with acutance, contrast, five fixed zones, correction
-provenance, group-level left/right decentring evidence, pair-local QA exclusions, and no copy
-verdict. Directory recursion, `--format`, frame-role detection, config files, real keystone
-estimation, artefact generation, and the exit-code taxonomy below are target contract, not current
-behaviour.
+`lenslab analyse <paths…>` emits pretty JSON using schema `0.1-target-qa`. It includes
+acutance/contrast zones, correction provenance, vignetting falloff evidence, lateral CA evidence,
+straight-line distortion evidence, inferred field-curvature evidence, frame-level target QA keystone
+evidence, and group-level left/right decentring evidence gated by target quality. It still emits no
+copy verdict. Directory recursion, `--format`, frame-role detection, config files, CLI keystone
+threshold flags, artefact generation, and the exit-code taxonomy below are target contract, not
+current behaviour.
 
 ```
 lenslab analyse <paths…>
@@ -116,11 +118,12 @@ lenslab inspect  <file>               # EXIF + decode info + corrections-present
 
 ## 6. JSON contract (canonical output)
 
-Current implementation note: the skeleton schema is `"0.1-decentring"`, not the full `"1.0"` shape
-below. It includes acutance/contrast zones, derived left/right decentring evidence, unknown
-correction and low-texture exclusions, and target quality marked as not assessed. It omits
-`generated_utc`, artefacts, real keystone QA, vignetting, CA, distortion, MTF50, and verdicts until
-those values can be populated honestly.
+Current implementation note: the skeleton schema is `"0.1-target-qa"`, not the full `"1.0"` shape
+below. It includes evidence families that the Rust code can populate honestly: acutance/contrast,
+vignetting falloff, lateral CA, straight-line distortion, inferred field curvature, target QA, and
+left/right decentring aggregation with blockers and exclusions. It omits `generated_utc`, verdicts,
+MTF50, report artefacts, folder input metadata, and the final `1.0` summary shape until those values
+can be populated honestly.
 
 Versioned (`schema_version`), stable, documented. Shape:
 
