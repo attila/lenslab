@@ -402,10 +402,11 @@ mod tests {
     use crate::image::{Dimensions, LinearImage, Rect};
     use crate::schema::{
         AnalyseGroup, CaBlocker, CaLateralEvidence, CaLateralMeasurements, CornerFalloff,
-        DecentringEvidence, ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements,
-        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, VignettingBlocker,
-        VignettingCornerValues, VignettingMeasurements, VignettingNumericMeasurement,
-        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        DecentringEvidence, ExclusionReason, FrameMeasurement, FrameQuality, LeftRightDecentring,
+        Measurements, PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements,
+        TargetQualityBlocker, VignettingBlocker, VignettingCornerValues, VignettingMeasurements,
+        VignettingNumericMeasurement, VignettingZoneMeasurements, ZoneMeasurement,
+        ZoneMeasurements,
     };
 
     fn patch(samples: Vec<f32>) -> LinearImage {
@@ -484,6 +485,7 @@ mod tests {
             input_index: 0,
             path: "frame.tif".to_owned(),
             aggregation_eligible: eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([

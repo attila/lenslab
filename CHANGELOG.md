@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `0.1-distortion`.
 - Field-curvature inference evidence from aperture-dependent centre/corner acutance behaviour, with
   blockers and exclusions using skeleton schema `0.1-field-curvature`.
+- Target QA keystone evidence and aggregate gating, including per-frame periodic reference quality,
+  blocker propagation, left/right axis ambiguity handling, and schema `0.1-target-qa`.
 - Checksum-pinned real-camera DNG fixtures and fixture tests for Bayer and X-Trans decode behaviour.
 - CI and release workflows covering formatting, clippy, tests, dependency checks, docs, fixture
   tests, four-target cross-compilation, and owner-approved GitHub Releases.

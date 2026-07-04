@@ -727,9 +727,9 @@ mod tests {
     use crate::schema::{
         CaBlocker, CaLateralMeasurements, DistortionBlocker, DistortionCandidate,
         DistortionMeasurement, DistortionMeasurements, DistortionOrientation,
-        DistortionReferenceSide, ExclusionReason, FrameMeasurement, Measurements,
-        SharpnessMeasurements, VignettingMeasurements, VignettingZoneMeasurements, ZoneMeasurement,
-        ZoneMeasurements,
+        DistortionReferenceSide, ExclusionReason, FrameMeasurement, FrameQuality, Measurements,
+        SharpnessMeasurements, TargetQualityBlocker, VignettingMeasurements,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn plane(width: usize, height: usize, paint: impl Fn(usize, usize) -> f32) -> LinearImage {
@@ -1021,6 +1021,7 @@ mod tests {
             input_index: 0,
             path: "frame.tif".to_owned(),
             aggregation_eligible: eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([

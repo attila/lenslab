@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-field-curvature";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-target-qa";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -109,15 +109,69 @@ impl DecentringEvidence {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TargetQuality {
     pub status: TargetQualityStatus,
+    pub method: Option<TargetQaMethod>,
+    pub keystone_pct: Option<TargetQaMeasurement>,
+    pub tilt_axis: Option<TiltAxis>,
+    pub gate_threshold_pct: f32,
+    pub assessed_frames: usize,
+    pub blocked_frames: usize,
     pub blockers: Vec<TargetQualityBlocker>,
 }
 
 impl TargetQuality {
+    pub const GATE_THRESHOLD_PCT: f32 = 1.5;
+
     #[must_use]
     pub fn not_assessed() -> Self {
         Self {
             status: TargetQualityStatus::NotAssessed,
+            method: None,
+            keystone_pct: None,
+            tilt_axis: None,
+            gate_threshold_pct: Self::GATE_THRESHOLD_PCT,
+            assessed_frames: 0,
+            blocked_frames: 0,
             blockers: vec![TargetQualityBlocker::KeystoneNotAssessed],
+        }
+    }
+
+    #[must_use]
+    pub fn assessed(
+        status: TargetQualityStatus,
+        method: TargetQaMethod,
+        keystone_pct: TargetQaMeasurement,
+        tilt_axis: TiltAxis,
+        assessed_frames: usize,
+        blocked_frames: usize,
+        blockers: Vec<TargetQualityBlocker>,
+    ) -> Self {
+        Self {
+            status,
+            method: Some(method),
+            keystone_pct: Some(keystone_pct),
+            tilt_axis: Some(tilt_axis),
+            gate_threshold_pct: Self::GATE_THRESHOLD_PCT,
+            assessed_frames,
+            blocked_frames,
+            blockers,
+        }
+    }
+
+    #[must_use]
+    pub fn blocked(
+        assessed_frames: usize,
+        blocked_frames: usize,
+        blockers: Vec<TargetQualityBlocker>,
+    ) -> Self {
+        Self {
+            status: TargetQualityStatus::Blocked,
+            method: None,
+            keystone_pct: None,
+            tilt_axis: None,
+            gate_threshold_pct: Self::GATE_THRESHOLD_PCT,
+            assessed_frames,
+            blocked_frames,
+            blockers,
         }
     }
 }
@@ -168,7 +222,112 @@ pub struct FrameMeasurement {
     pub input_index: usize,
     pub path: String,
     pub aggregation_eligible: bool,
+    pub qa: FrameQuality,
     pub measurements: Measurements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FrameQuality {
+    pub target: TargetQaEvidence,
+}
+
+impl FrameQuality {
+    #[must_use]
+    pub fn target_blocked(blocker: TargetQualityBlocker) -> Self {
+        Self {
+            target: TargetQaEvidence::blocked(blocker),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TargetQaEvidence {
+    pub method: Option<TargetQaMethod>,
+    pub status: TargetQualityStatus,
+    pub keystone_pct: Option<TargetQaMeasurement>,
+    pub tilt_axis: Option<TiltAxis>,
+    pub gate_threshold_pct: f32,
+    pub blockers: Vec<TargetQualityBlocker>,
+}
+
+impl TargetQaEvidence {
+    #[must_use]
+    pub fn passed(
+        method: TargetQaMethod,
+        keystone_pct: TargetQaMeasurement,
+        tilt_axis: TiltAxis,
+    ) -> Self {
+        Self::assessed(TargetQualityStatus::Passed, method, keystone_pct, tilt_axis)
+    }
+
+    #[must_use]
+    pub fn gated(
+        method: TargetQaMethod,
+        keystone_pct: TargetQaMeasurement,
+        tilt_axis: TiltAxis,
+    ) -> Self {
+        Self::assessed(TargetQualityStatus::Gated, method, keystone_pct, tilt_axis)
+    }
+
+    #[must_use]
+    pub fn blocked(blocker: TargetQualityBlocker) -> Self {
+        Self {
+            method: None,
+            status: TargetQualityStatus::Blocked,
+            keystone_pct: None,
+            tilt_axis: None,
+            gate_threshold_pct: TargetQuality::GATE_THRESHOLD_PCT,
+            blockers: vec![blocker],
+        }
+    }
+
+    #[must_use]
+    pub fn blocked_with(blockers: Vec<TargetQualityBlocker>) -> Self {
+        Self {
+            method: None,
+            status: TargetQualityStatus::Blocked,
+            keystone_pct: None,
+            tilt_axis: None,
+            gate_threshold_pct: TargetQuality::GATE_THRESHOLD_PCT,
+            blockers,
+        }
+    }
+
+    fn assessed(
+        status: TargetQualityStatus,
+        method: TargetQaMethod,
+        keystone_pct: TargetQaMeasurement,
+        tilt_axis: TiltAxis,
+    ) -> Self {
+        Self {
+            method: Some(method),
+            status,
+            keystone_pct: Some(keystone_pct),
+            tilt_axis: Some(tilt_axis),
+            gate_threshold_pct: TargetQuality::GATE_THRESHOLD_PCT,
+            blockers: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct TargetQaMeasurement {
+    pub value: f32,
+    pub unit: NumericUnit,
+    pub method: TargetQaMethod,
+    pub confidence: f32,
+}
+
+impl TargetQaMeasurement {
+    #[must_use]
+    pub fn measured_percent(value: f32, method: TargetQaMethod, confidence: f32) -> Option<Self> {
+        (value.is_finite() && confidence.is_finite()).then_some(Self {
+            value,
+            unit: NumericUnit::Percent,
+            method,
+            confidence,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -629,6 +788,7 @@ pub enum CorrectionStatus {
 pub enum NumericUnit {
     Acutance,
     AcutanceDelta,
+    Percent,
     Ratio,
     LinearLuminance,
     PxFullres,
@@ -672,6 +832,13 @@ pub enum DistortionMethod {
 #[serde(rename_all = "snake_case")]
 pub enum FieldCurvatureMethod {
     InferredApertureLagFromMeasuredAcutance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetQaMethod {
+    MeasuredPeriodicReferenceScale,
+    MeasuredOrthogonalReferenceScale,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -754,6 +921,9 @@ pub enum VignettingSymmetryStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetQualityStatus {
+    Passed,
+    Gated,
+    Blocked,
     NotAssessed,
 }
 
@@ -761,6 +931,21 @@ pub enum TargetQualityStatus {
 #[serde(rename_all = "snake_case")]
 pub enum TargetQualityBlocker {
     KeystoneNotAssessed,
+    KeystoneAboveThreshold,
+    NoSuitableTargetReference,
+    WeakTargetGeometry,
+    AmbiguousTiltAxis,
+    LowContrast,
+    LineDiscontinuous,
+    ProfileTooShort,
+    UnknownCorrections,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TiltAxis {
+    Vertical,
+    Horizontal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -806,11 +991,12 @@ mod tests {
         DistortionBlocker, DistortionCandidate, DistortionEvidence, DistortionMeasurement,
         DistortionMeasurements, DistortionOrientation, DistortionReferenceSide, ExclusionCount,
         ExclusionReason, FieldCurvatureEvidence, FieldCurvatureMethod, FieldCurvatureStatus,
-        FieldCurvatureSummary, FrameMeasurement, LeftRightDecentring, Measurements, PairId,
-        PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind, VignettingBlocker,
-        VignettingCornerValues, VignettingEvidence, VignettingMeasurements, VignettingMethod,
-        VignettingNumericMeasurement, VignettingSymmetry, VignettingZoneMeasurements,
-        ZoneMeasurement, ZoneMeasurements,
+        FieldCurvatureSummary, FrameMeasurement, FrameQuality, LeftRightDecentring, Measurements,
+        PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind,
+        TargetQaEvidence, TargetQaMeasurement, TargetQaMethod, TargetQuality, TargetQualityBlocker,
+        TargetQualityStatus, TiltAxis, VignettingBlocker, VignettingCornerValues,
+        VignettingEvidence, VignettingMeasurements, VignettingMethod, VignettingNumericMeasurement,
+        VignettingSymmetry, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32, eligible: bool) -> ZoneMeasurement {
@@ -832,6 +1018,7 @@ mod tests {
             input_index,
             path: path.to_owned(),
             aggregation_eligible: eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: zones(eligible),
@@ -956,6 +1143,31 @@ mod tests {
         })
     }
 
+    fn target_measurement(value: f32) -> TargetQaMeasurement {
+        TargetQaMeasurement::measured_percent(
+            value,
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            0.8,
+        )
+        .expect("finite target QA measurement")
+    }
+
+    fn target_quality(status: TargetQualityStatus, value: f32) -> TargetQuality {
+        TargetQuality::assessed(
+            status,
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            target_measurement(value),
+            TiltAxis::Vertical,
+            1,
+            0,
+            if status == TargetQualityStatus::Gated {
+                vec![TargetQualityBlocker::KeystoneAboveThreshold]
+            } else {
+                vec![]
+            },
+        )
+    }
+
     fn two_sample_decentring() -> DecentringEvidence {
         decentring(
             pair(
@@ -1030,8 +1242,8 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-field-curvature\","));
-        assert_eq!(value["schema_version"], "0.1-field-curvature");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-target-qa\","));
+        assert_eq!(value["schema_version"], "0.1-target-qa");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
         assert_report_field_order(&json);
@@ -1111,6 +1323,12 @@ mod tests {
                     .find("\"frames\"")
                     .expect("group frames are serialised")
         );
+        assert!(
+            json.find("\"qa\"").expect("frame QA is serialised")
+                < json
+                    .find("\"measurements\"")
+                    .expect("frame measurements are serialised")
+        );
     }
 
     fn assert_decentring_json(value: &serde_json::Value) {
@@ -1121,6 +1339,30 @@ mod tests {
         assert_eq!(
             value["groups"][0]["decentring"]["target_quality"]["status"],
             "not_assessed"
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["method"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["keystone_pct"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["tilt_axis"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["gate_threshold_pct"],
+            1.5
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["assessed_frames"],
+            0
+        );
+        assert_eq!(
+            value["groups"][0]["decentring"]["target_quality"]["blocked_frames"],
+            0
         );
         assert_eq!(
             value["groups"][0]["decentring"]["target_quality"]["blockers"][0],
@@ -1149,6 +1391,26 @@ mod tests {
 
     fn assert_frame_measurement_json(value: &serde_json::Value) {
         assert_eq!(value["groups"][0]["frames"][0]["input_index"], 0);
+        assert_eq!(
+            value["groups"][0]["frames"][0]["qa"]["target"]["status"],
+            "blocked"
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["qa"]["target"]["keystone_pct"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["qa"]["target"]["tilt_axis"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["qa"]["target"]["gate_threshold_pct"],
+            1.5
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][0]["qa"]["target"]["blockers"][0],
+            "no_suitable_target_reference"
+        );
         assert_eq!(
             value["groups"][0]["frames"][0]["measurements"]["sharpness"]["zones"]["centre"]["acutance"]
                 ["unit"],
@@ -1287,6 +1549,135 @@ mod tests {
             "inferred_weak_reference_bow"
         );
         assert_eq!(inferred["blockers"][0], "weak_reference_geometry");
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn serialises_target_qa_statuses_measurement_and_blockers() {
+        let mut gated_frame = frame(0, "gated.tif", true);
+        gated_frame.qa.target = TargetQaEvidence::gated(
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            target_measurement(3.0),
+            TiltAxis::Vertical,
+        );
+        let mut passed_frame = frame(1, "passed.tif", true);
+        passed_frame.qa.target = TargetQaEvidence::passed(
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            target_measurement(0.4),
+            TiltAxis::Horizontal,
+        );
+        let blocked_frame = frame(2, "blocked.tif", true);
+        let report = AnalyseReport::new(
+            "0.1.0",
+            vec![],
+            FieldCurvatureEvidence::not_assessed(),
+            vec![
+                AnalyseGroup {
+                    lens_model: None,
+                    focal_length_mm: None,
+                    f_number: None,
+                    decentring: DecentringEvidence {
+                        method: super::DecentringMethod::DerivedFromMeasuredAcutance,
+                        target_quality: target_quality(TargetQualityStatus::Gated, 3.0),
+                        left_right: LeftRightDecentring {
+                            top_pair: pair(PairId::TopLeftMinusTopRight, 0, vec![], None, None),
+                            bottom_pair: pair(
+                                PairId::BottomLeftMinusBottomRight,
+                                0,
+                                vec![],
+                                None,
+                                None,
+                            ),
+                        },
+                    },
+                    vignetting: vignetting(),
+                    ca_lateral: CaLateralEvidence::empty(),
+                    distortion: DistortionEvidence::empty(),
+                    frames: vec![gated_frame, passed_frame, blocked_frame],
+                },
+                AnalyseGroup {
+                    lens_model: None,
+                    focal_length_mm: None,
+                    f_number: Some(8.0),
+                    decentring: DecentringEvidence {
+                        method: super::DecentringMethod::DerivedFromMeasuredAcutance,
+                        target_quality: target_quality(TargetQualityStatus::Passed, 0.4),
+                        left_right: LeftRightDecentring {
+                            top_pair: pair(PairId::TopLeftMinusTopRight, 0, vec![], None, None),
+                            bottom_pair: pair(
+                                PairId::BottomLeftMinusBottomRight,
+                                0,
+                                vec![],
+                                None,
+                                None,
+                            ),
+                        },
+                    },
+                    vignetting: vignetting(),
+                    ca_lateral: CaLateralEvidence::empty(),
+                    distortion: DistortionEvidence::empty(),
+                    frames: vec![],
+                },
+                AnalyseGroup {
+                    lens_model: None,
+                    focal_length_mm: None,
+                    f_number: Some(11.0),
+                    decentring: DecentringEvidence {
+                        method: super::DecentringMethod::DerivedFromMeasuredAcutance,
+                        target_quality: TargetQuality::blocked(
+                            0,
+                            1,
+                            vec![TargetQualityBlocker::NoSuitableTargetReference],
+                        ),
+                        left_right: LeftRightDecentring {
+                            top_pair: pair(PairId::TopLeftMinusTopRight, 0, vec![], None, None),
+                            bottom_pair: pair(
+                                PairId::BottomLeftMinusBottomRight,
+                                0,
+                                vec![],
+                                None,
+                                None,
+                            ),
+                        },
+                    },
+                    vignetting: vignetting(),
+                    ca_lateral: CaLateralEvidence::empty(),
+                    distortion: DistortionEvidence::empty(),
+                    frames: vec![],
+                },
+            ],
+        );
+
+        let value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string_pretty(&report).unwrap()).unwrap();
+        let frame_target = &value["groups"][0]["frames"][0]["qa"]["target"];
+        assert_eq!(frame_target["method"], "measured_periodic_reference_scale");
+        assert_eq!(frame_target["status"], "gated");
+        assert_eq!(frame_target["keystone_pct"]["value"], 3.0);
+        assert_eq!(frame_target["keystone_pct"]["unit"], "percent");
+        assert_eq!(
+            frame_target["keystone_pct"]["method"],
+            "measured_periodic_reference_scale"
+        );
+        assert_eq!(frame_target["keystone_pct"]["confidence"], 0.8);
+        assert_eq!(frame_target["tilt_axis"], "vertical");
+        assert!(frame_target["blockers"].as_array().unwrap().is_empty());
+        assert_eq!(
+            value["groups"][0]["frames"][1]["qa"]["target"]["status"],
+            "passed"
+        );
+        assert_eq!(
+            value["groups"][0]["frames"][1]["qa"]["target"]["tilt_axis"],
+            "horizontal"
+        );
+        assert_eq!(
+            value["groups"][2]["decentring"]["target_quality"]["status"],
+            "blocked"
+        );
+        assert_eq!(
+            value["groups"][2]["decentring"]["target_quality"]["blockers"][0],
+            "no_suitable_target_reference"
+        );
     }
 
     #[test]
