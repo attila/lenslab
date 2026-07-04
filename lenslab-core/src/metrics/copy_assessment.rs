@@ -6,7 +6,7 @@ use crate::schema::{
     AnalyseGroup, CopyAssessmentBlocker, CopyAssessmentEvidence, CopyAssessmentGate,
     CopyAssessmentState, CopyAssessmentSupport, DerivedNumericMeasurement, ExclusionReason,
     FieldCurvatureBlocker, FieldCurvatureEvidence, FieldCurvatureStatus, PairSummary,
-    TargetQualityStatus,
+    ReliabilityBlocker, TargetQualityStatus,
 };
 
 const CENTRED_MAX_ABS_DELTA: f32 = 0.08;
@@ -236,6 +236,8 @@ struct SeriesSummary {
     top_mean: f32,
     bottom_mean: f32,
     max_abs: f32,
+    top_sign_consistent: bool,
+    bottom_sign_consistent: bool,
 }
 
 impl SeriesSummary {
@@ -251,6 +253,12 @@ impl SeriesSummary {
             top_mean,
             bottom_mean,
             max_abs,
+            top_sign_consistent: sign_consistent(
+                candidates.iter().map(|candidate| candidate.top_delta),
+            ),
+            bottom_sign_consistent: sign_consistent(
+                candidates.iter().map(|candidate| candidate.bottom_delta),
+            ),
         })
     }
 }
@@ -326,6 +334,13 @@ fn push_pair_blockers(blockers: &mut Vec<CopyAssessmentBlocker>, pair: &PairSumm
     if pair.included_samples == 0 {
         push_blocker(blockers, CopyAssessmentBlocker::InsufficientSamples);
     }
+    for blocker in &pair.reliability_blockers {
+        match blocker {
+            ReliabilityBlocker::InsufficientSamples => {
+                push_blocker(blockers, CopyAssessmentBlocker::InsufficientSamples);
+            }
+        }
+    }
     for exclusion in &pair.excluded {
         match exclusion.reason {
             ExclusionReason::UnknownCorrections => {
@@ -379,7 +394,10 @@ fn support_state(
         );
         return (CopyAssessmentState::Inconclusive, blockers);
     }
-    if summary.top_mean.signum() != summary.bottom_mean.signum() {
+    if !summary.top_sign_consistent
+        || !summary.bottom_sign_consistent
+        || summary.top_mean.signum() != summary.bottom_mean.signum()
+    {
         push_blocker(&mut blockers, CopyAssessmentBlocker::InconsistentAsymmetry);
         return (CopyAssessmentState::Inconclusive, blockers);
     }
@@ -407,16 +425,30 @@ fn field_curvature_gate(
         FieldCurvatureStatus::Supported => {
             CopyAssessmentGate::blocked(CopyAssessmentBlocker::FieldCurvatureCounterevidence)
         }
-        FieldCurvatureStatus::Blocked
-            if summary
+        FieldCurvatureStatus::Blocked => CopyAssessmentGate::blocked_with(normalize_blockers(
+            summary
                 .blockers
-                .contains(&FieldCurvatureBlocker::AmbiguousPeak) =>
-        {
-            CopyAssessmentGate::blocked(CopyAssessmentBlocker::AmbiguousFieldCurvature)
+                .iter()
+                .copied()
+                .map(copy_blocker_for_field_curvature)
+                .collect(),
+        )),
+        FieldCurvatureStatus::NotSupported => CopyAssessmentGate::passed(),
+    }
+}
+
+fn copy_blocker_for_field_curvature(blocker: FieldCurvatureBlocker) -> CopyAssessmentBlocker {
+    match blocker {
+        FieldCurvatureBlocker::InsufficientApertureSeries => {
+            CopyAssessmentBlocker::InsufficientApertureSeries
         }
-        FieldCurvatureStatus::NotSupported | FieldCurvatureStatus::Blocked => {
-            CopyAssessmentGate::passed()
+        FieldCurvatureBlocker::MissingLensFocalIdentity => {
+            CopyAssessmentBlocker::MissingLensFocalIdentity
         }
+        FieldCurvatureBlocker::MissingAperture => CopyAssessmentBlocker::MissingAperture,
+        FieldCurvatureBlocker::AmbiguousPeak => CopyAssessmentBlocker::AmbiguousFieldCurvature,
+        FieldCurvatureBlocker::LowTexture => CopyAssessmentBlocker::LowTexture,
+        FieldCurvatureBlocker::UnknownCorrections => CopyAssessmentBlocker::UnknownCorrections,
     }
 }
 
@@ -489,6 +521,24 @@ fn mean(samples: impl IntoIterator<Item = f32>) -> Result<f32, CopyAssessmentErr
     let value = samples.iter().sum::<f32>() / len;
     validate_finite(value)?;
     Ok(value)
+}
+
+fn sign_consistent(samples: impl IntoIterator<Item = f32>) -> bool {
+    let mut sign = None;
+    for sample in samples {
+        if sample == 0.0 {
+            return false;
+        }
+        let sample_sign = sample.is_sign_positive();
+        if let Some(sign) = sign {
+            if sign != sample_sign {
+                return false;
+            }
+        } else {
+            sign = Some(sample_sign);
+        }
+    }
+    true
 }
 
 fn validate_finite(value: f32) -> Result<(), CopyAssessmentError> {
@@ -604,6 +654,71 @@ mod tests {
         assert!(support.blockers.is_empty());
         assert_delta(support.evidence.mean_top_pair_delta.unwrap().value, 0.21);
         assert_delta(support.evidence.mean_bottom_pair_delta.unwrap().value, 0.22);
+    }
+
+    #[test]
+    fn one_sample_pair_reliability_blocks_hard_support() {
+        let groups = vec![
+            group_with_reliability_blocker(5.6, TargetQualityStatus::Passed, Some(0.22), Some(0.2)),
+            group_with_reliability_blocker(8.0, TargetQualityStatus::Passed, Some(0.2), Some(0.24)),
+        ];
+
+        let support = assess_copy_support(
+            &groups,
+            &field_curvature(FieldCurvatureStatus::NotSupported, vec![]),
+        )
+        .expect("copy support");
+
+        assert_eq!(support.state, CopyAssessmentState::Inconclusive);
+        assert!(!support.hard_support_eligible);
+        assert_eq!(
+            support.blockers,
+            vec![
+                CopyAssessmentBlocker::InsufficientSamples,
+                CopyAssessmentBlocker::InsufficientApertureSeries,
+            ]
+        );
+        assert_eq!(
+            support.evidence.left_right_consistency.blockers,
+            vec![CopyAssessmentBlocker::InsufficientSamples]
+        );
+    }
+
+    #[test]
+    fn aperture_sign_flip_blocks_decentred_support() {
+        let groups = vec![
+            group(
+                5.6,
+                TargetQualityStatus::Passed,
+                Some(0.5),
+                Some(0.5),
+                vec![],
+            ),
+            group(
+                8.0,
+                TargetQualityStatus::Passed,
+                Some(-0.1),
+                Some(0.3),
+                vec![],
+            ),
+        ];
+
+        let support = assess_copy_support(
+            &groups,
+            &field_curvature(FieldCurvatureStatus::NotSupported, vec![]),
+        )
+        .expect("copy support");
+
+        assert_eq!(support.state, CopyAssessmentState::Inconclusive);
+        assert!(!support.hard_support_eligible);
+        assert_eq!(
+            support.blockers,
+            vec![CopyAssessmentBlocker::InconsistentAsymmetry]
+        );
+        assert_eq!(
+            support.evidence.left_right_consistency.blockers,
+            vec![CopyAssessmentBlocker::InconsistentAsymmetry]
+        );
     }
 
     #[test]
@@ -754,6 +869,42 @@ mod tests {
         assert_eq!(
             support.blockers,
             vec![CopyAssessmentBlocker::AmbiguousFieldCurvature]
+        );
+    }
+
+    #[test]
+    fn blocked_field_curvature_check_blocks_decentred_support() {
+        let groups = vec![
+            group(
+                5.6,
+                TargetQualityStatus::Passed,
+                Some(0.22),
+                Some(0.2),
+                vec![],
+            ),
+            group(
+                8.0,
+                TargetQualityStatus::Passed,
+                Some(0.2),
+                Some(0.24),
+                vec![],
+            ),
+        ];
+
+        let support = assess_copy_support(
+            &groups,
+            &field_curvature(
+                FieldCurvatureStatus::Blocked,
+                vec![FieldCurvatureBlocker::LowTexture],
+            ),
+        )
+        .expect("copy support");
+
+        assert_eq!(support.state, CopyAssessmentState::Inconclusive);
+        assert_eq!(support.blockers, vec![CopyAssessmentBlocker::LowTexture]);
+        assert_eq!(
+            support.evidence.field_curvature_counterevidence.blockers,
+            vec![CopyAssessmentBlocker::LowTexture]
         );
     }
 
@@ -909,6 +1060,20 @@ mod tests {
             distortion: DistortionEvidence::empty(),
             frames: Vec::new(),
         }
+    }
+
+    fn group_with_reliability_blocker(
+        f_number: f32,
+        target_status: TargetQualityStatus,
+        top_delta: Option<f32>,
+        bottom_delta: Option<f32>,
+    ) -> AnalyseGroup {
+        let mut group = group(f_number, target_status, top_delta, bottom_delta, vec![]);
+        group.decentring.left_right.top_pair.reliability_blockers =
+            vec![ReliabilityBlocker::InsufficientSamples];
+        group.decentring.left_right.bottom_pair.reliability_blockers =
+            vec![ReliabilityBlocker::InsufficientSamples];
+        group
     }
 
     fn target_quality(status: TargetQualityStatus) -> TargetQuality {

@@ -1244,7 +1244,8 @@ pub enum TextureMethod {
 mod tests {
     use super::{
         AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralEvidence,
-        CaLateralMeasurements, CopyAssessmentBlocker, CopyAssessmentSupport, CorrectionStatus,
+        CaLateralMeasurements, CopyAssessmentBlocker, CopyAssessmentEvidence, CopyAssessmentGate,
+        CopyAssessmentMethod, CopyAssessmentState, CopyAssessmentSupport, CorrectionStatus,
         DecentringEvidence, DerivedNumericMeasurement, DistortionBlocker, DistortionCandidate,
         DistortionEvidence, DistortionMeasurement, DistortionMeasurements, DistortionOrientation,
         DistortionReferenceSide, ExclusionCount, ExclusionReason, FieldCurvatureEvidence,
@@ -1473,6 +1474,31 @@ mod tests {
         CopyAssessmentSupport::inconclusive(vec![CopyAssessmentBlocker::NoControlledTargetSeries])
     }
 
+    fn supported_decentred_copy_assessment() -> CopyAssessmentSupport {
+        CopyAssessmentSupport {
+            state: CopyAssessmentState::SupportsDecentred,
+            method: CopyAssessmentMethod::DerivedFromTargetQaAcutanceAndFieldCurvature,
+            hard_support_eligible: true,
+            lens_model: Some("50mm".to_owned()),
+            focal_length_mm: Some(50.0),
+            included_aperture_groups: vec![5.6, 8.0],
+            evidence: CopyAssessmentEvidence {
+                target_quality: CopyAssessmentGate::passed(),
+                correction_provenance: CopyAssessmentGate::passed(),
+                aperture_series: CopyAssessmentGate::passed(),
+                left_right_consistency: CopyAssessmentGate::passed(),
+                field_curvature_counterevidence: CopyAssessmentGate::passed(),
+                mean_top_pair_delta: DerivedNumericMeasurement::acutance_delta(0.21),
+                mean_bottom_pair_delta: DerivedNumericMeasurement::acutance_delta(0.22),
+                max_abs_pair_delta: DerivedNumericMeasurement::acutance_delta(0.24),
+                centred_threshold: 0.08,
+                decentred_threshold: 0.18,
+            },
+            blockers: vec![],
+            reshoot: vec![],
+        }
+    }
+
     #[test]
     fn serialises_confirmed_uncorrected_skeleton_in_field_order() {
         let report = AnalyseReport::new(
@@ -1539,6 +1565,59 @@ mod tests {
             json.find("\"copy_assessment\"")
                 .expect("copy assessment is serialised")
                 < json.find("\"groups\"").expect("groups are serialised")
+        );
+    }
+
+    #[test]
+    fn serialises_populated_copy_assessment_support_shape() {
+        let report = AnalyseReport::new(
+            "0.1.0",
+            vec![],
+            FieldCurvatureEvidence::not_assessed(),
+            supported_decentred_copy_assessment(),
+            vec![],
+        );
+
+        let value = serde_json::to_value(&report).unwrap();
+        let support = &value["copy_assessment"];
+
+        assert_eq!(support["state"], "supports_decentred");
+        assert_eq!(support["hard_support_eligible"], true);
+        assert_eq!(support["lens_model"], "50mm");
+        assert_eq!(support["focal_length_mm"], 50.0);
+        let included_apertures = support["included_aperture_groups"].as_array().unwrap();
+        assert_delta(included_apertures[0].as_f64().unwrap(), 5.6);
+        assert_delta(included_apertures[1].as_f64().unwrap(), 8.0);
+        assert_eq!(support["evidence"]["target_quality"]["status"], "passed");
+        assert_eq!(
+            support["evidence"]["field_curvature_counterevidence"]["status"],
+            "passed"
+        );
+        assert_eq!(
+            support["evidence"]["mean_top_pair_delta"]["unit"],
+            "acutance_delta"
+        );
+        assert_delta(
+            support["evidence"]["mean_top_pair_delta"]["value"]
+                .as_f64()
+                .unwrap(),
+            0.21,
+        );
+        assert_delta(
+            support["evidence"]["max_abs_pair_delta"]["value"]
+                .as_f64()
+                .unwrap(),
+            0.24,
+        );
+        assert!(support["blockers"].as_array().unwrap().is_empty());
+        assert!(support["reshoot"].as_array().unwrap().is_empty());
+        assert_eq!(support.get("verdict"), None);
+    }
+
+    fn assert_delta(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 0.000_001,
+            "{actual} != {expected}"
         );
     }
 

@@ -87,11 +87,19 @@ fn assert_copy_support_shape(report: &Value) {
         ),
         "{support}"
     );
+    let expected_hard_support = matches!(
+        support["state"].as_str(),
+        Some("supports_centred" | "supports_decentred")
+    );
+    assert_eq!(
+        support["hard_support_eligible"].as_bool(),
+        Some(expected_hard_support),
+        "{support}"
+    );
     assert_eq!(
         support["method"],
         "derived_from_target_qa_acutance_and_field_curvature"
     );
-    assert!(support["hard_support_eligible"].is_boolean());
     assert!(support["included_aperture_groups"].as_array().is_some());
     assert!(
         support["blockers"]
