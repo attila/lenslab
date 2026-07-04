@@ -5,7 +5,7 @@ use crate::image::LinearPatchView;
 use crate::schema::{
     AnalyseGroup, CornerFalloff, ExclusionCount, ExclusionReason, FrameMeasurement,
     VignettingBlocker, VignettingCornerValues, VignettingEvidence, VignettingMethod,
-    VignettingNumericMeasurement, VignettingSymmetry, VignettingSymmetryStatus,
+    VignettingNumericMeasurement, VignettingSymmetry, VignettingSymmetryStatus, VignettingWarning,
 };
 
 const CENTRE_LUMINANCE_DRIFT_LIMIT_STOPS: f32 = 0.25;
@@ -223,14 +223,19 @@ fn assess_controlled_aperture_series(
         .expect("one partition")
         .members;
     members.sort_by(|left, right| left.f_number.total_cmp(&right.f_number));
-    let mut sanity_blockers = Vec::new();
+    let mut warnings = Vec::new();
     let repeat_scatter = repeat_scatter_stops(groups, &members)?;
     if repeat_scatter.is_some_and(|scatter| scatter > SAME_APERTURE_CORNER_SCATTER_LIMIT_STOPS) {
-        sanity_blockers.push(VignettingBlocker::UnstableRepeatScatter);
+        warnings.push(VignettingWarning::UnstableRepeatOutlierExcluded);
     }
     let centre_drift = centre_luminance_drift_stops(groups, &members)?;
     if centre_drift > CENTRE_LUMINANCE_DRIFT_LIMIT_STOPS {
-        sanity_blockers.push(VignettingBlocker::UnstableCentreLuminance);
+        warnings.push(VignettingWarning::UnstableCentreLuminance);
+    }
+    add_warnings(groups, &members, &warnings);
+    let mut sanity_blockers = Vec::new();
+    if has_unresolved_repeat_scatter(groups, &members)? {
+        sanity_blockers.push(VignettingBlocker::UnstableRepeatScatter);
     }
     if contradicts_aperture_trend(&members) {
         sanity_blockers.push(VignettingBlocker::ContradictoryApertureTrend);
@@ -255,22 +260,37 @@ fn assess_controlled_aperture_series(
 
 fn collect_partitions(groups: &mut [AnalyseGroup]) -> Vec<Partition> {
     let mut partitions = Vec::new();
+    let submitted_series_key = groups
+        .iter()
+        .find_map(|group| {
+            let lens_model = group.lens_model.clone()?;
+            let focal_length_mm = group.focal_length_mm?;
+            focal_length_mm
+                .is_finite()
+                .then_some((lens_model, focal_length_mm))
+        })
+        .unwrap_or_else(|| ("submitted_series".to_owned(), 0.0));
     for (index, group) in groups.iter_mut().enumerate() {
-        let (Some(lens_model), Some(focal_length_mm)) =
-            (group.lens_model.clone(), group.focal_length_mm)
-        else {
-            add_blocker(
-                &mut group.vignetting.blockers,
-                VignettingBlocker::MissingLensFocalIdentity,
-            );
-            continue;
+        let mut missing_identity = false;
+        let lens_model = group.lens_model.clone().unwrap_or_else(|| {
+            missing_identity = true;
+            submitted_series_key.0.clone()
+        });
+        let focal_length_mm = group.focal_length_mm.unwrap_or_else(|| {
+            missing_identity = true;
+            submitted_series_key.1
+        });
+        let focal_length_mm = if focal_length_mm.is_finite() {
+            focal_length_mm
+        } else {
+            missing_identity = true;
+            submitted_series_key.1
         };
-        if !focal_length_mm.is_finite() {
-            add_blocker(
-                &mut group.vignetting.blockers,
-                VignettingBlocker::MissingLensFocalIdentity,
+        if missing_identity {
+            add_warning(
+                &mut group.vignetting.warnings,
+                VignettingWarning::MissingLensFocalIdentity,
             );
-            continue;
         }
         let Some(f_number) = group.f_number else {
             add_blocker(
@@ -316,39 +336,13 @@ fn repeat_scatter_stops(
     let mut max_scatter: Option<f32> = None;
     for member in members {
         let group = &groups[member.index];
-        let values = group
-            .frames
-            .iter()
-            .filter(|frame| frame.aggregation_eligible)
-            .map(|frame| frame.measurements.vignetting.zones.values())
-            .collect::<Vec<_>>();
-        for values in &values {
-            validate_values(*values)?;
-        }
-        if values.len() < 2 {
+        let samples = group_vignetting_samples(group);
+        let selection = select_stable_repeats(&samples)?;
+        if selection.values.len() < 2 {
             continue;
         }
-        for corner_values in [
-            values
-                .iter()
-                .map(|value| value.top_left.value)
-                .collect::<Vec<_>>(),
-            values
-                .iter()
-                .map(|value| value.top_right.value)
-                .collect::<Vec<_>>(),
-            values
-                .iter()
-                .map(|value| value.bottom_left.value)
-                .collect::<Vec<_>>(),
-            values
-                .iter()
-                .map(|value| value.bottom_right.value)
-                .collect::<Vec<_>>(),
-        ] {
-            let scatter = range(&corner_values);
-            max_scatter = Some(max_scatter.map_or(scatter, |max| max.max(scatter)));
-        }
+        let scatter = repeat_values_scatter(&selection.values)?;
+        max_scatter = Some(max_scatter.map_or(scatter, |max| max.max(scatter)));
     }
     Ok(max_scatter)
 }
@@ -375,6 +369,77 @@ fn centre_luminance_drift_stops(
     let min = centres.iter().copied().min_by(f32::total_cmp).unwrap();
     let max = centres.iter().copied().max_by(f32::total_cmp).unwrap();
     Ok((max / min).log2())
+}
+
+fn centre_luminance_values_drift_stops(centres: &[f32]) -> Result<f32, VignettingError> {
+    for luminance in centres {
+        validate_positive_luminance(*luminance)?;
+    }
+    if centres.len() < 2 {
+        return Ok(0.0);
+    }
+    let min = centres.iter().copied().min_by(f32::total_cmp).unwrap();
+    let max = centres.iter().copied().max_by(f32::total_cmp).unwrap();
+    Ok((max / min).log2())
+}
+
+fn has_unresolved_repeat_scatter(
+    groups: &[AnalyseGroup],
+    members: &[PartitionMember],
+) -> Result<bool, VignettingError> {
+    for member in members {
+        let samples = group_vignetting_samples(&groups[member.index]);
+        let selection = select_stable_repeats(&samples)?;
+        if selection.excluded_repeat_outliers > 0 || selection.values.len() < 2 {
+            continue;
+        }
+        if repeat_values_scatter(&selection.values)? > SAME_APERTURE_CORNER_SCATTER_LIMIT_STOPS {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn repeat_values_scatter(values: &[VignettingCornerValues]) -> Result<f32, VignettingError> {
+    for values in values {
+        validate_values(*values)?;
+    }
+    if values.len() < 2 {
+        return Ok(0.0);
+    }
+    Ok([
+        values
+            .iter()
+            .map(|value| value.top_left.value)
+            .collect::<Vec<_>>(),
+        values
+            .iter()
+            .map(|value| value.top_right.value)
+            .collect::<Vec<_>>(),
+        values
+            .iter()
+            .map(|value| value.bottom_left.value)
+            .collect::<Vec<_>>(),
+        values
+            .iter()
+            .map(|value| value.bottom_right.value)
+            .collect::<Vec<_>>(),
+    ]
+    .into_iter()
+    .map(|corner_values| range(&corner_values))
+    .fold(0.0, f32::max))
+}
+
+fn group_vignetting_samples(group: &AnalyseGroup) -> Vec<VignettingSample> {
+    group
+        .frames
+        .iter()
+        .filter(|frame| frame.aggregation_eligible)
+        .map(|frame| VignettingSample {
+            values: frame.measurements.vignetting.zones.values(),
+            centre_luminance: frame.measurements.sharpness.zones.centre.luminance.value,
+        })
+        .collect()
 }
 
 fn contradicts_aperture_trend(members: &[PartitionMember]) -> bool {
@@ -487,7 +552,7 @@ fn push_partition_member(
 
 #[derive(Default)]
 struct GroupAccumulator {
-    values: Vec<VignettingCornerValues>,
+    samples: Vec<VignettingSample>,
     unknown_corrections: usize,
 }
 
@@ -496,7 +561,10 @@ impl GroupAccumulator {
         let values = frame.measurements.vignetting.zones.values();
         validate_values(values)?;
         if frame.aggregation_eligible {
-            self.values.push(values);
+            self.samples.push(VignettingSample {
+                values,
+                centre_luminance: frame.measurements.sharpness.zones.centre.luminance.value,
+            });
         } else {
             self.unknown_corrections += 1;
         }
@@ -504,9 +572,16 @@ impl GroupAccumulator {
     }
 
     fn finish(self) -> Result<VignettingEvidence, VignettingError> {
+        let selection = select_stable_repeats(&self.samples)?;
         let raw_corner_mean_stops =
-            mean_values(&self.values, VignettingMethod::MeasuredLuminanceRatio)?;
+            mean_values(&selection.values, VignettingMethod::MeasuredLuminanceRatio)?;
         let mut excluded = Vec::new();
+        if selection.excluded_repeat_outliers > 0 {
+            excluded.push(ExclusionCount {
+                reason: ExclusionReason::UnstableRepeatOutlier,
+                count: selection.excluded_repeat_outliers,
+            });
+        }
         if self.unknown_corrections > 0 {
             excluded.push(ExclusionCount {
                 reason: ExclusionReason::UnknownCorrections,
@@ -521,19 +596,118 @@ impl GroupAccumulator {
             blockers.push(VignettingBlocker::UnknownCorrections);
         }
         blockers.push(VignettingBlocker::SymmetryNotAssessed);
+        let mut warnings = Vec::new();
+        if selection.excluded_repeat_outliers > 0 {
+            warnings.push(VignettingWarning::UnstableRepeatOutlierExcluded);
+        }
 
         Ok(VignettingEvidence {
             method: VignettingMethod::MeasuredLuminanceRatio,
-            included_samples: self.values.len(),
+            included_samples: selection.values.len(),
             excluded_samples: excluded.iter().map(|count| count.count).sum(),
             reference_f_number: None,
             raw_corner_mean_stops,
             optical_delta_from_reference_stops: None,
             blockers,
+            warnings,
             excluded,
             symmetry: VignettingSymmetry::not_assessed(),
         })
     }
+}
+
+#[derive(Clone, Copy)]
+struct VignettingSample {
+    values: VignettingCornerValues,
+    centre_luminance: f32,
+}
+
+struct RepeatSelection {
+    values: Vec<VignettingCornerValues>,
+    excluded_repeat_outliers: usize,
+}
+
+fn select_stable_repeats(samples: &[VignettingSample]) -> Result<RepeatSelection, VignettingError> {
+    for sample in samples {
+        validate_values(sample.values)?;
+        validate_positive_luminance(sample.centre_luminance)?;
+    }
+    if samples.len() < 3 || repeat_subset_stability(samples)?.is_stable {
+        return Ok(RepeatSelection {
+            values: samples.iter().map(|sample| sample.values).collect(),
+            excluded_repeat_outliers: 0,
+        });
+    }
+    if samples.len() > usize::BITS as usize {
+        return Ok(RepeatSelection {
+            values: samples.iter().map(|sample| sample.values).collect(),
+            excluded_repeat_outliers: 0,
+        });
+    }
+
+    let mut best: Option<(Vec<usize>, RepeatStability)> = None;
+    for mask in 1usize..(1usize << samples.len()) {
+        if mask.count_ones() < 2 || mask.count_ones() as usize == samples.len() {
+            continue;
+        }
+        let indices = (0..samples.len())
+            .filter(|index| mask & (1usize << index) != 0)
+            .collect::<Vec<_>>();
+        let subset = indices
+            .iter()
+            .map(|index| samples[*index])
+            .collect::<Vec<_>>();
+        let stability = repeat_subset_stability(&subset)?;
+        if !stability.is_stable {
+            continue;
+        }
+        let replace = best.as_ref().is_none_or(|(best_indices, best_stability)| {
+            indices.len() > best_indices.len()
+                || (indices.len() == best_indices.len()
+                    && stability.max_corner_scatter < best_stability.max_corner_scatter)
+        });
+        if replace {
+            best = Some((indices, stability));
+        }
+    }
+
+    let Some((indices, _)) = best else {
+        return Ok(RepeatSelection {
+            values: samples.iter().map(|sample| sample.values).collect(),
+            excluded_repeat_outliers: 0,
+        });
+    };
+    Ok(RepeatSelection {
+        excluded_repeat_outliers: samples.len() - indices.len(),
+        values: indices.iter().map(|index| samples[*index].values).collect(),
+    })
+}
+
+#[derive(Clone, Copy)]
+struct RepeatStability {
+    is_stable: bool,
+    max_corner_scatter: f32,
+}
+
+fn repeat_subset_stability(
+    samples: &[VignettingSample],
+) -> Result<RepeatStability, VignettingError> {
+    let values = samples
+        .iter()
+        .map(|sample| sample.values)
+        .collect::<Vec<_>>();
+    let max_corner_scatter = repeat_values_scatter(&values)?;
+    let centre_drift = centre_luminance_values_drift_stops(
+        &samples
+            .iter()
+            .map(|sample| sample.centre_luminance)
+            .collect::<Vec<_>>(),
+    )?;
+    Ok(RepeatStability {
+        is_stable: max_corner_scatter <= SAME_APERTURE_CORNER_SCATTER_LIMIT_STOPS
+            && centre_drift <= CENTRE_LUMINANCE_DRIFT_LIMIT_STOPS,
+        max_corner_scatter,
+    })
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -666,6 +840,24 @@ fn add_blocker(blockers: &mut Vec<VignettingBlocker>, blocker: VignettingBlocker
     }
 }
 
+fn add_warning(warnings: &mut Vec<VignettingWarning>, warning: VignettingWarning) {
+    if !warnings.contains(&warning) {
+        warnings.push(warning);
+    }
+}
+
+fn add_warnings(
+    groups: &mut [AnalyseGroup],
+    members: &[PartitionMember],
+    warnings: &[VignettingWarning],
+) {
+    for member in members {
+        for warning in warnings {
+            add_warning(&mut groups[member.index].vignetting.warnings, *warning);
+        }
+    }
+}
+
 fn remove_blocker(blockers: &mut Vec<VignettingBlocker>, blocker: VignettingBlocker) {
     blockers.retain(|existing| *existing != blocker);
 }
@@ -689,8 +881,8 @@ mod tests {
         DecentringEvidence, ExclusionReason, FrameMeasurement, FrameQuality, LeftRightDecentring,
         Measurements, PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements,
         TargetQualityBlocker, VignettingBlocker, VignettingCornerValues, VignettingMeasurements,
-        VignettingNumericMeasurement, VignettingSymmetryStatus, VignettingZoneMeasurements,
-        ZoneMeasurement, ZoneMeasurements,
+        VignettingNumericMeasurement, VignettingSymmetryStatus, VignettingWarning,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn patch(samples: Vec<f32>) -> LinearImage {
@@ -914,43 +1106,68 @@ mod tests {
     }
 
     #[test]
-    fn controlled_series_with_missing_identity_blocks_without_optical_delta() {
+    fn controlled_series_with_missing_identity_warns_without_blocking_optical_delta() {
         let mut missing_lens = stale_delta_group();
         missing_lens.lens_model = None;
-        let mut missing_focal = stale_delta_group();
-        missing_focal.focal_length_mm = None;
-        let mut non_finite_focal = stale_delta_group();
-        non_finite_focal.focal_length_mm = Some(f32::INFINITY);
+        let mut groups = vec![missing_lens, group(11.0, values(-0.4, -0.4, -0.4, -0.4))];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("identity warnings");
+
+        assert_eq!(groups[0].vignetting.reference_f_number, Some(11.0));
+        assert!(
+            groups[0]
+                .vignetting
+                .optical_delta_from_reference_stops
+                .is_some()
+        );
+        assert!(
+            groups[0]
+                .vignetting
+                .warnings
+                .contains(&VignettingWarning::MissingLensFocalIdentity)
+        );
+        assert!(
+            !groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::MissingLensFocalIdentity)
+        );
+    }
+
+    #[test]
+    fn missing_aperture_still_blocks_controlled_vignetting() {
         let mut missing_aperture = stale_delta_group();
         missing_aperture.f_number = None;
         let mut groups = vec![
-            missing_lens,
-            missing_focal,
-            non_finite_focal,
             missing_aperture,
+            group(11.0, values(-0.4, -0.4, -0.4, -0.4)),
         ];
 
-        apply_reference_relative_vignetting(&mut groups, true).expect("identity blockers");
+        apply_reference_relative_vignetting(&mut groups, true).expect("aperture blocker");
 
-        for group in groups {
-            assert!(group.vignetting.reference_f_number.is_none());
-            assert!(
-                group
-                    .vignetting
-                    .optical_delta_from_reference_stops
-                    .is_none()
-            );
-            assert_eq!(
-                group.vignetting.symmetry.status,
-                VignettingSymmetryStatus::Blocked
-            );
-            assert!(
-                !group
-                    .vignetting
-                    .blockers
-                    .contains(&VignettingBlocker::SymmetryNotAssessed)
-            );
-        }
+        assert!(groups[0].vignetting.reference_f_number.is_none());
+        assert!(
+            groups[0]
+                .vignetting
+                .optical_delta_from_reference_stops
+                .is_none()
+        );
+        assert_eq!(
+            groups[0].vignetting.symmetry.status,
+            VignettingSymmetryStatus::Blocked
+        );
+        assert!(
+            groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::MissingAperture)
+        );
+        assert!(
+            !groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::SymmetryNotAssessed)
+        );
     }
 
     #[test]
@@ -1125,7 +1342,47 @@ mod tests {
     }
 
     #[test]
-    fn centre_luminance_drift_above_threshold_blocks_optical_delta() {
+    fn repeat_scatter_outlier_is_excluded_when_stable_pair_remains() {
+        let noisy = group_with_frames(
+            4.0,
+            vec![
+                frame(true, values(-1.2, -1.2, -1.2, -1.2)),
+                frame(true, values(-1.21, -1.2, -1.2, -1.2)),
+                frame(true, values(-1.45, -1.2, -1.2, -1.2)),
+            ],
+        );
+        let mut groups = vec![noisy, group(11.0, values(-0.4, -0.4, -0.4, -0.4))];
+
+        apply_reference_relative_vignetting(&mut groups, true).expect("scatter warning");
+
+        assert!(
+            groups[0]
+                .vignetting
+                .warnings
+                .contains(&VignettingWarning::UnstableRepeatOutlierExcluded)
+        );
+        assert_eq!(groups[0].vignetting.included_samples, 2);
+        assert_eq!(groups[0].vignetting.excluded_samples, 1);
+        assert_eq!(
+            groups[0].vignetting.excluded[0].reason,
+            ExclusionReason::UnstableRepeatOutlier
+        );
+        assert!(
+            groups[0]
+                .vignetting
+                .optical_delta_from_reference_stops
+                .is_some()
+        );
+        assert!(
+            !groups[0]
+                .vignetting
+                .blockers
+                .contains(&VignettingBlocker::UnstableRepeatScatter)
+        );
+    }
+
+    #[test]
+    fn centre_luminance_drift_above_threshold_warns_without_blocking_optical_delta() {
         let mut groups = vec![
             group_with_frames(
                 4.0,
@@ -1145,19 +1402,19 @@ mod tests {
             ),
         ];
 
-        apply_reference_relative_vignetting(&mut groups, true).expect("centre drift blocker");
+        apply_reference_relative_vignetting(&mut groups, true).expect("centre drift warning");
 
         assert!(
             groups[0]
                 .vignetting
-                .blockers
-                .contains(&VignettingBlocker::UnstableCentreLuminance)
+                .warnings
+                .contains(&VignettingWarning::UnstableCentreLuminance)
         );
         assert!(
             groups[0]
                 .vignetting
                 .optical_delta_from_reference_stops
-                .is_none()
+                .is_some()
         );
     }
 

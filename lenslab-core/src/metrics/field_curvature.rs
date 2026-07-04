@@ -661,6 +661,7 @@ mod tests {
             raw_corner_mean_stops: None,
             optical_delta_from_reference_stops: None,
             blockers: Vec::new(),
+            warnings: Vec::new(),
             excluded: Vec::new(),
             symmetry: VignettingSymmetry::not_assessed(),
         }

@@ -711,6 +711,7 @@ pub struct VignettingEvidence {
     pub raw_corner_mean_stops: Option<VignettingCornerValues>,
     pub optical_delta_from_reference_stops: Option<VignettingCornerValues>,
     pub blockers: Vec<VignettingBlocker>,
+    pub warnings: Vec<VignettingWarning>,
     pub excluded: Vec<ExclusionCount>,
     pub symmetry: VignettingSymmetry,
 }
@@ -933,6 +934,14 @@ pub enum VignettingBlocker {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum VignettingWarning {
+    MissingLensFocalIdentity,
+    UnstableCentreLuminance,
+    UnstableRepeatOutlierExcluded,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum VignettingSymmetryStatus {
     NotAssessed,
     RadiallySymmetric,
@@ -998,6 +1007,7 @@ pub enum ExclusionReason {
     LineDiscontinuous,
     FitResidualTooHigh,
     UnsupportedColourChannels,
+    UnstableRepeatOutlier,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -1089,6 +1099,7 @@ mod tests {
                 VignettingBlocker::InsufficientApertureSeries,
                 VignettingBlocker::SymmetryNotAssessed,
             ],
+            warnings: vec![],
             excluded: vec![],
             symmetry: VignettingSymmetry::not_assessed(),
         }
