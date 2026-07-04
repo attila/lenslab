@@ -188,6 +188,31 @@ fn assert_success_json(output: &Output) -> Value {
     serde_json::from_slice(&output.stdout).expect("analyse stdout is JSON")
 }
 
+fn assert_blocked_unknown_field_curvature(json: &Value) {
+    let field_curvature = &json["field_curvature"];
+    assert_eq!(
+        field_curvature["method"],
+        "inferred_aperture_lag_from_measured_acutance"
+    );
+    let summary = &field_curvature["summaries"][0];
+    assert_eq!(summary["status"], "blocked");
+    assert!(
+        summary["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "missing_lens_focal_identity")
+    );
+    assert!(
+        summary["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "unknown_corrections")
+    );
+    assert_eq!(summary["excluded"][0]["reason"], "unknown_corrections");
+}
+
 #[test]
 fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let dir = TempDir::new().expect("tempdir");
@@ -197,7 +222,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
+    assert_eq!(json["schema_version"], "0.1-field-curvature");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -267,6 +292,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
         json["groups"][0]["distortion"]["excluded"][0]["reason"],
         "unknown_corrections"
     );
+    assert_blocked_unknown_field_curvature(&json);
 }
 
 #[test]
@@ -338,7 +364,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
+    assert_eq!(json["schema_version"], "0.1-field-curvature");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -369,7 +395,7 @@ fn analyse_reports_synthetic_distortion_bow_candidate() {
     let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
     let candidate = &distortion["candidate"];
 
-    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
+    assert_eq!(json["schema_version"], "0.1-field-curvature");
     assert_eq!(candidate["orientation"], "horizontal");
     assert_eq!(candidate["reference_side"], "top");
     assert_eq!(candidate["bow"]["unit"], "percent_frame");
@@ -581,7 +607,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-distortion-ca-unsupported");
+    assert_eq!(json["schema_version"], "0.1-field-curvature");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -603,7 +629,6 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
         "confidence",
         "artifacts",
         "ca_lateral",
-        "field_curvature",
         "mtf50",
         "target_role",
         "checkerboard_calibration",
@@ -628,6 +653,11 @@ fn analyse_json_omits_generated_utc_and_unbuilt_verdict_fields() {
             .as_object()
             .expect("group")
             .contains_key("distortion")
+    );
+    assert!(
+        json.as_object()
+            .expect("report")
+            .contains_key("field_curvature")
     );
 }
 
@@ -699,6 +729,7 @@ fn analyse_unknown_tiff_correction_provenance_is_visible() {
         json["groups"][0]["distortion"]["excluded"][0]["reason"],
         "unknown_corrections"
     );
+    assert_blocked_unknown_field_curvature(&json);
 }
 
 #[cfg(feature = "real-fixtures")]
@@ -776,6 +807,17 @@ fn analyse_measures_real_bayer_dng_fixture() {
     } else {
         assert!(!distortion["blockers"].as_array().unwrap().is_empty());
     }
+
+    let field_curvature = &json["field_curvature"]["summaries"][0];
+    assert_eq!(field_curvature["status"], "blocked");
+    assert!(
+        field_curvature["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(Value::is_string)
+    );
+    assert!(!field_curvature["blockers"].as_array().unwrap().is_empty());
 }
 
 #[cfg(feature = "real-fixtures")]
