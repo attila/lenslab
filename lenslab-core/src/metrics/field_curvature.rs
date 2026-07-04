@@ -518,10 +518,11 @@ mod tests {
     use crate::schema::{
         AnalyseGroup, CaBlocker, CaLateralEvidence, CaLateralMeasurements, DecentringEvidence,
         DistortionEvidence, ExclusionReason, FieldCurvatureBlocker, FieldCurvatureStatus,
-        FrameMeasurement, LeftRightDecentring, MeasurementMethod, Measurements, NumericMeasurement,
-        NumericUnit, PairId, PairSummary, ReliabilityBlocker, SharpnessMeasurements, TextureMethod,
-        TextureUsable, VignettingEvidence, VignettingMeasurements, VignettingMethod,
-        VignettingSymmetry, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        FrameMeasurement, FrameQuality, LeftRightDecentring, MeasurementMethod, Measurements,
+        NumericMeasurement, NumericUnit, PairId, PairSummary, ReliabilityBlocker,
+        SharpnessMeasurements, TargetQualityBlocker, TextureMethod, TextureUsable,
+        VignettingEvidence, VignettingMeasurements, VignettingMethod, VignettingSymmetry,
+        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn zone(acutance: f32, texture_usable: bool) -> ZoneMeasurement {
@@ -557,6 +558,7 @@ mod tests {
             input_index: 0,
             path: "frame.dng".to_owned(),
             aggregation_eligible: eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([

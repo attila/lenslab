@@ -7,10 +7,13 @@ use crate::schema::{
     ZoneMeasurement,
 };
 
+use super::target_qa::{TargetQaError, aggregate_target_quality};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DecentringError {
     NonFiniteAcutance { value: f32 },
     NonFiniteDerivedValue { value: f32 },
+    TargetQa(TargetQaError),
 }
 
 impl Display for DecentringError {
@@ -20,11 +23,18 @@ impl Display for DecentringError {
             Self::NonFiniteDerivedValue { value } => {
                 write!(formatter, "non-finite derived decentring value {value}")
             }
+            Self::TargetQa(error) => write!(formatter, "{error}"),
         }
     }
 }
 
 impl Error for DecentringError {}
+
+impl From<TargetQaError> for DecentringError {
+    fn from(error: TargetQaError) -> Self {
+        Self::TargetQa(error)
+    }
+}
 
 pub fn aggregate_left_right_decentring(
     frames: &[FrameMeasurement],
@@ -45,10 +55,14 @@ pub fn aggregate_left_right_decentring(
         )?;
     }
 
-    Ok(DecentringEvidence::not_assessed(LeftRightDecentring {
-        top_pair: top_pair.finish()?,
-        bottom_pair: bottom_pair.finish()?,
-    }))
+    Ok(DecentringEvidence {
+        method: crate::schema::DecentringMethod::DerivedFromMeasuredAcutance,
+        target_quality: aggregate_target_quality(frames)?,
+        left_right: LeftRightDecentring {
+            top_pair: top_pair.finish()?,
+            bottom_pair: bottom_pair.finish()?,
+        },
+    })
 }
 
 struct PairAccumulator {
@@ -178,9 +192,11 @@ fn sample_std(samples: &[f32]) -> Option<f32> {
 mod tests {
     use super::{DecentringError, aggregate_left_right_decentring};
     use crate::schema::{
-        CaBlocker, CaLateralMeasurements, ExclusionReason, FrameMeasurement, MeasurementMethod,
-        Measurements, NumericMeasurement, NumericUnit, SharpnessMeasurements, TextureMethod,
-        TextureUsable, ZoneMeasurement, ZoneMeasurements,
+        CaBlocker, CaLateralMeasurements, ExclusionReason, FrameMeasurement, FrameQuality,
+        MeasurementMethod, Measurements, NumericMeasurement, NumericUnit, SharpnessMeasurements,
+        TargetQaEvidence, TargetQaMeasurement, TargetQaMethod, TargetQualityBlocker,
+        TargetQualityStatus, TextureMethod, TextureUsable, TiltAxis, ZoneMeasurement,
+        ZoneMeasurements,
     };
 
     fn zone(acutance: f32, contrast: f32) -> ZoneMeasurement {
@@ -226,6 +242,7 @@ mod tests {
             input_index: 0,
             path: "frame.dng".to_owned(),
             aggregation_eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements {
@@ -267,6 +284,27 @@ mod tests {
             zone(1.0 + bottom_delta, 0.2),
             zone(1.0, 0.2),
         )
+    }
+
+    fn target_measurement(value: f32) -> TargetQaMeasurement {
+        TargetQaMeasurement::measured_percent(
+            value,
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            0.8,
+        )
+        .expect("finite target QA measurement")
+    }
+
+    fn frame_with_target(aggregation_eligible: bool, target: TargetQaEvidence) -> FrameMeasurement {
+        let mut frame = frame(
+            aggregation_eligible,
+            zone(1.2, 0.2),
+            zone(1.0, 0.2),
+            zone(1.3, 0.2),
+            zone(1.0, 0.2),
+        );
+        frame.qa.target = target;
+        frame
     }
 
     fn assert_close(actual: f32, expected: f32) {
@@ -404,5 +442,151 @@ mod tests {
         .expect_err("non-finite ineligible acutance rejected");
 
         assert!(matches!(err, DecentringError::NonFiniteAcutance { .. }));
+    }
+
+    #[test]
+    fn passed_target_qa_makes_group_target_quality_pass() {
+        let evidence = aggregate_left_right_decentring(&[frame_with_target(
+            true,
+            TargetQaEvidence::passed(
+                TargetQaMethod::MeasuredPeriodicReferenceScale,
+                target_measurement(0.4),
+                TiltAxis::Vertical,
+            ),
+        )])
+        .expect("aggregate");
+
+        assert_eq!(evidence.target_quality.status, TargetQualityStatus::Passed);
+        assert_eq!(evidence.target_quality.assessed_frames, 1);
+        assert_eq!(evidence.target_quality.blocked_frames, 0);
+        assert_close(evidence.target_quality.keystone_pct.unwrap().value, 0.4);
+    }
+
+    #[test]
+    fn gated_target_qa_takes_precedence_over_passed_and_blocked_frames() {
+        let evidence = aggregate_left_right_decentring(&[
+            frame_with_target(
+                true,
+                TargetQaEvidence::passed(
+                    TargetQaMethod::MeasuredPeriodicReferenceScale,
+                    target_measurement(0.4),
+                    TiltAxis::Vertical,
+                ),
+            ),
+            frame_with_target(
+                true,
+                TargetQaEvidence::gated(
+                    TargetQaMethod::MeasuredPeriodicReferenceScale,
+                    target_measurement(3.0),
+                    TiltAxis::Vertical,
+                ),
+            ),
+            frame_with_target(
+                true,
+                TargetQaEvidence::blocked(TargetQualityBlocker::NoSuitableTargetReference),
+            ),
+        ])
+        .expect("aggregate");
+
+        assert_eq!(evidence.target_quality.status, TargetQualityStatus::Gated);
+        assert_eq!(evidence.target_quality.assessed_frames, 2);
+        assert_eq!(evidence.target_quality.blocked_frames, 1);
+        assert_close(evidence.target_quality.keystone_pct.unwrap().value, 3.0);
+        assert!(
+            evidence
+                .target_quality
+                .blockers
+                .contains(&TargetQualityBlocker::KeystoneAboveThreshold)
+        );
+    }
+
+    #[test]
+    fn blocked_target_geometry_preserves_blocker_counts() {
+        let evidence = aggregate_left_right_decentring(&[frame_with_target(
+            true,
+            TargetQaEvidence::blocked(TargetQualityBlocker::NoSuitableTargetReference),
+        )])
+        .expect("aggregate");
+
+        assert_eq!(evidence.target_quality.status, TargetQualityStatus::Blocked);
+        assert_eq!(evidence.target_quality.assessed_frames, 0);
+        assert_eq!(evidence.target_quality.blocked_frames, 1);
+        assert_eq!(
+            evidence.target_quality.blockers,
+            vec![TargetQualityBlocker::NoSuitableTargetReference]
+        );
+    }
+
+    #[test]
+    fn unknown_correction_target_observations_cannot_pass_group_quality() {
+        let evidence = aggregate_left_right_decentring(&[frame_with_target(
+            false,
+            TargetQaEvidence::passed(
+                TargetQaMethod::MeasuredPeriodicReferenceScale,
+                target_measurement(0.4),
+                TiltAxis::Vertical,
+            ),
+        )])
+        .expect("aggregate");
+
+        assert_eq!(evidence.target_quality.status, TargetQualityStatus::Blocked);
+        assert_eq!(evidence.target_quality.assessed_frames, 1);
+        assert_eq!(evidence.target_quality.blocked_frames, 1);
+        assert_eq!(
+            evidence.target_quality.blockers,
+            vec![TargetQualityBlocker::UnknownCorrections]
+        );
+    }
+
+    #[test]
+    fn unknown_correction_blocked_target_preserves_geometry_and_provenance_blockers() {
+        let evidence = aggregate_left_right_decentring(&[frame_with_target(
+            false,
+            TargetQaEvidence::blocked(TargetQualityBlocker::NoSuitableTargetReference),
+        )])
+        .expect("aggregate");
+
+        assert_eq!(evidence.target_quality.status, TargetQualityStatus::Blocked);
+        assert_eq!(evidence.target_quality.assessed_frames, 0);
+        assert_eq!(evidence.target_quality.blocked_frames, 1);
+        assert_eq!(
+            evidence.target_quality.blockers,
+            vec![
+                TargetQualityBlocker::UnknownCorrections,
+                TargetQualityBlocker::NoSuitableTargetReference,
+            ]
+        );
+    }
+
+    #[test]
+    fn inconsistent_assessed_target_qa_is_rejected_before_aggregation() {
+        let target = TargetQaEvidence::passed(
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            target_measurement(3.0),
+            TiltAxis::Vertical,
+        );
+        let err = aggregate_left_right_decentring(&[frame_with_target(true, target)])
+            .expect_err("inconsistent assessed target QA rejected");
+
+        assert!(matches!(err, DecentringError::TargetQa(_)));
+    }
+
+    #[test]
+    fn non_finite_target_qa_is_rejected_before_unknown_correction_blocking() {
+        let mut target = TargetQaEvidence::passed(
+            TargetQaMethod::MeasuredPeriodicReferenceScale,
+            target_measurement(0.4),
+            TiltAxis::Vertical,
+        );
+        target.keystone_pct = Some(TargetQaMeasurement {
+            value: f32::NAN,
+            unit: NumericUnit::Percent,
+            method: TargetQaMethod::MeasuredPeriodicReferenceScale,
+            confidence: 0.8,
+        });
+        let err = aggregate_left_right_decentring(&[frame_with_target(false, target)])
+            .expect_err("non-finite target QA rejected");
+
+        assert!(matches!(err, DecentringError::TargetQa(_)));
     }
 }

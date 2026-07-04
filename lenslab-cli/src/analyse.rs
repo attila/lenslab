@@ -8,15 +8,16 @@ use lenslab_core::metrics::ca::{aggregate_group_ca, measure_lateral_ca};
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
 use lenslab_core::metrics::distortion::{aggregate_group_distortion, measure_distortion};
 use lenslab_core::metrics::field_curvature::infer_field_curvature;
+use lenslab_core::metrics::target_qa::measure_target_qa;
 use lenslab_core::metrics::vignetting::{
     aggregate_group_vignetting, apply_reference_relative_vignetting, measured_falloff,
     median_luminance,
 };
 use lenslab_core::schema::{
     AnalyseGroup, AnalyseInput, AnalyseReport, CaBlocker, CaLateralMeasurements, CaZoneEvidence,
-    CaZoneMeasurements, CorrectionStatus, DistortionMeasurements, FrameMeasurement, Measurements,
-    SharpnessMeasurements, SourceKind, VignettingMeasurements, VignettingZoneMeasurements,
-    ZoneMeasurement, ZoneMeasurements,
+    CaZoneMeasurements, CorrectionStatus, DistortionMeasurements, FrameMeasurement, FrameQuality,
+    Measurements, SharpnessMeasurements, SourceKind, VignettingMeasurements,
+    VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
 };
 use lenslab_core::zones::{ZoneId, default_zones, project_zone};
 use lenslab_decode::{DecodedFrame, DecodedPixels, FrameInfo};
@@ -52,6 +53,9 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
                 input_index: index,
                 path: path.display().to_string(),
                 aggregation_eligible,
+                qa: FrameQuality {
+                    target: zones.target_qa,
+                },
                 measurements: Measurements {
                     sharpness: SharpnessMeasurements {
                         zones: zones.sharpness_zones,
@@ -73,9 +77,10 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
         field_curvature,
         analyse_groups,
     );
+    let mut output = serde_json::to_vec_pretty(&report)?;
+    output.push(b'\n');
     let mut stdout = std::io::stdout().lock();
-    serde_json::to_writer_pretty(&mut stdout, &report)?;
-    writeln!(stdout)?;
+    stdout.write_all(&output)?;
     Ok(())
 }
 
@@ -151,6 +156,7 @@ struct MeasuredZones {
     vignetting: VignettingMeasurements,
     ca_lateral: CaLateralMeasurements,
     distortion: DistortionMeasurements,
+    target_qa: lenslab_core::schema::TargetQaEvidence,
 }
 
 fn measure_frame_zones(
@@ -218,6 +224,8 @@ fn measure_frame_zones(
     )?)?;
     let distortion = measure_distortion(full_plane)
         .with_context(|| format!("failed to measure distortion in {}", path.display()))?;
+    let target_qa = measure_target_qa(full_plane)
+        .with_context(|| format!("failed to measure target QA in {}", path.display()))?;
 
     Ok(MeasuredZones {
         info,
@@ -225,6 +233,7 @@ fn measure_frame_zones(
         vignetting,
         ca_lateral,
         distortion,
+        target_qa,
     })
 }
 
@@ -368,8 +377,9 @@ mod tests {
     use lenslab_core::metrics::field_curvature::infer_field_curvature;
     use lenslab_core::schema::{
         CaBlocker, CaLateralMeasurements, CornerFalloff, FieldCurvatureStatus, FrameMeasurement,
-        Measurements, SharpnessMeasurements, VignettingMeasurements, VignettingNumericMeasurement,
-        VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        FrameQuality, Measurements, SharpnessMeasurements, TargetQualityBlocker,
+        VignettingMeasurements, VignettingNumericMeasurement, VignettingZoneMeasurements,
+        ZoneMeasurement, ZoneMeasurements,
     };
 
     fn frame(input_index: usize) -> FrameMeasurement {
@@ -383,6 +393,7 @@ mod tests {
             input_index,
             path: format!("frame-{input_index}.tif"),
             aggregation_eligible: true,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([

@@ -444,8 +444,9 @@ mod tests {
     use crate::image::{Dimensions, LinearImage, Rect};
     use crate::schema::{
         CaLateralMeasurements, CaMeasurement, CaShift, CaZoneEvidence, CaZoneMeasurements,
-        ExclusionReason, FrameMeasurement, Measurements, SharpnessMeasurements,
-        VignettingMeasurements, VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
+        ExclusionReason, FrameMeasurement, FrameQuality, Measurements, SharpnessMeasurements,
+        TargetQualityBlocker, VignettingMeasurements, VignettingZoneMeasurements, ZoneMeasurement,
+        ZoneMeasurements,
     };
 
     fn image(width: usize, height: usize, samples: Vec<f32>) -> LinearImage {
@@ -501,6 +502,7 @@ mod tests {
             input_index: 0,
             path: "frame.tif".to_owned(),
             aggregation_eligible: eligible,
+            qa: FrameQuality::target_blocked(TargetQualityBlocker::NoSuitableTargetReference),
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([

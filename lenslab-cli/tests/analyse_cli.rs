@@ -154,6 +154,31 @@ fn write_distortion_line_tiff(path: &Path, span: LineSpan, sagitta: f32) {
     image.write_data(&samples).expect("write RGB TIFF data");
 }
 
+fn write_target_courses_tiff(path: &Path, top_period: u32, bottom_period: u32) {
+    const WIDTH: u32 = 96;
+    const HEIGHT: u32 = 96;
+    let file = File::create(path).expect("create TIFF");
+    let mut encoder = TiffEncoder::new(file).expect("new TIFF encoder");
+    let image = encoder
+        .new_image::<RGB16>(WIDTH, HEIGHT)
+        .expect("new RGB TIFF");
+    let mut samples = Vec::with_capacity(WIDTH as usize * HEIGHT as usize * 3);
+    for y in 0..HEIGHT {
+        let period = if y < HEIGHT / 2 {
+            top_period
+        } else {
+            bottom_period
+        };
+        let value = if y % period < 3 { 3_000 } else { 55_000 };
+        for _ in 0..WIDTH {
+            samples.push(value);
+            samples.push(value);
+            samples.push(value);
+        }
+    }
+    image.write_data(&samples).expect("write RGB TIFF data");
+}
+
 #[derive(Clone, Copy)]
 enum LineSpan {
     Full,
@@ -213,6 +238,45 @@ fn assert_blocked_unknown_field_curvature(json: &Value) {
     assert_eq!(summary["excluded"][0]["reason"], "unknown_corrections");
 }
 
+#[cfg(feature = "real-fixtures")]
+fn assert_legal_target_qa(json: &Value) {
+    let target = &json["groups"][0]["frames"][0]["qa"]["target"];
+    let status = target["status"].as_str().expect("target QA status");
+    assert!(
+        ["passed", "gated", "blocked", "not_assessed"].contains(&status),
+        "{status}"
+    );
+    if status == "passed" || status == "gated" {
+        assert!(
+            target["keystone_pct"]["value"]
+                .as_f64()
+                .unwrap()
+                .is_finite(),
+            "{target}"
+        );
+        assert!(
+            target["keystone_pct"]["confidence"]
+                .as_f64()
+                .unwrap()
+                .is_finite(),
+            "{target}"
+        );
+        assert!(["vertical", "horizontal"].contains(&target["tilt_axis"].as_str().unwrap()));
+    } else {
+        assert_eq!(target["keystone_pct"], Value::Null);
+        assert_eq!(target["tilt_axis"], Value::Null);
+        assert!(!target["blockers"].as_array().unwrap().is_empty());
+    }
+    let group_target = &json["groups"][0]["decentring"]["target_quality"];
+    assert!(
+        ["passed", "gated", "blocked", "not_assessed"].contains(
+            &group_target["status"]
+                .as_str()
+                .expect("group target QA status")
+        )
+    );
+}
+
 #[test]
 fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let dir = TempDir::new().expect("tempdir");
@@ -222,7 +286,7 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-field-curvature");
+    assert_eq!(json["schema_version"], "0.1-target-qa");
     assert_eq!(json["inputs"][0]["source_kind"], "rgb");
     assert_eq!(
         json["inputs"][0]["corrections"],
@@ -231,11 +295,22 @@ fn analyse_writes_json_for_gray_tiff_to_stdout() {
     assert_eq!(json["groups"][0]["frames"][0]["input_index"], 0);
     assert_eq!(
         json["groups"][0]["decentring"]["target_quality"]["status"],
-        "not_assessed"
+        "blocked"
     );
-    assert_eq!(
-        json["groups"][0]["decentring"]["target_quality"]["blockers"][0],
-        "keystone_not_assessed"
+    assert!(
+        json["groups"][0]["decentring"]["target_quality"]["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "unknown_corrections"
+                || blocker == "no_suitable_target_reference"
+                || blocker == "low_contrast")
+    );
+    assert!(
+        json["groups"][0]["frames"][0]
+            .as_object()
+            .unwrap()
+            .contains_key("qa")
     );
     assert_eq!(
         json["groups"][0]["decentring"]["left_right"]["top_pair"]["included_samples"],
@@ -364,7 +439,7 @@ fn analyse_reports_synthetic_lateral_ca_shift() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-field-curvature");
+    assert_eq!(json["schema_version"], "0.1-target-qa");
     for corner in ca_corner_names() {
         let shift =
             &json["groups"][0]["frames"][0]["measurements"]["ca_lateral"]["zones"][corner]["shift"];
@@ -395,7 +470,7 @@ fn analyse_reports_synthetic_distortion_bow_candidate() {
     let distortion = &json["groups"][0]["frames"][0]["measurements"]["distortion"];
     let candidate = &distortion["candidate"];
 
-    assert_eq!(json["schema_version"], "0.1-field-curvature");
+    assert_eq!(json["schema_version"], "0.1-target-qa");
     assert_eq!(candidate["orientation"], "horizontal");
     assert_eq!(candidate["reference_side"], "top");
     assert_eq!(candidate["bow"]["unit"], "percent_frame");
@@ -463,6 +538,74 @@ fn analyse_reports_no_distortion_reference_as_blocker() {
             .iter()
             .any(|blocker| blocker == "no_straight_reference" || blocker == "fit_residual_too_high")
     );
+}
+
+#[test]
+fn analyse_reports_frame_level_gated_target_qa_for_periodic_tiff() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("target-gated.tif");
+    write_target_courses_tiff(&input, 12, 16);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let frame_target = &json["groups"][0]["frames"][0]["qa"]["target"];
+    let group_target = &json["groups"][0]["decentring"]["target_quality"];
+
+    assert_eq!(json["schema_version"], "0.1-target-qa");
+    assert_eq!(frame_target["status"], "gated");
+    assert_eq!(frame_target["method"], "measured_periodic_reference_scale");
+    assert_eq!(frame_target["tilt_axis"], "vertical");
+    assert!(frame_target["keystone_pct"]["value"].as_f64().unwrap() > 1.5);
+    assert_eq!(group_target["status"], "blocked");
+    assert!(
+        group_target["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "unknown_corrections")
+    );
+    assert!(json.get("verdict").is_none());
+    assert!(json.get("copy").is_none());
+}
+
+#[test]
+fn analyse_reports_frame_level_passed_target_qa_for_below_threshold_tiff() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("target-passed.tif");
+    write_target_courses_tiff(&input, 12, 12);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let frame_target = &json["groups"][0]["frames"][0]["qa"]["target"];
+    let group_target = &json["groups"][0]["decentring"]["target_quality"];
+
+    assert_eq!(frame_target["status"], "passed");
+    assert_eq!(frame_target["tilt_axis"], "vertical");
+    assert!(frame_target["keystone_pct"]["value"].as_f64().unwrap() <= 1.5);
+    assert_ne!(group_target["status"], "passed");
+    assert!(
+        group_target["blockers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == "unknown_corrections")
+    );
+}
+
+#[test]
+fn analyse_reports_scene_like_tiff_as_target_qa_blocked() {
+    let dir = TempDir::new().expect("tempdir");
+    let input = dir.path().join("scene-like.tif");
+    write_gray_tiff(&input, 96, 96, 0);
+
+    let output = lenslab(&["analyse", input.to_str().unwrap()]);
+    let json = assert_success_json(&output);
+    let frame_target = &json["groups"][0]["frames"][0]["qa"]["target"];
+
+    assert_eq!(frame_target["status"], "blocked");
+    assert_eq!(frame_target["keystone_pct"], Value::Null);
+    assert_eq!(frame_target["tilt_axis"], Value::Null);
+    assert!(!frame_target["blockers"].as_array().unwrap().is_empty());
 }
 
 #[test]
@@ -607,7 +750,7 @@ fn analyse_json_uses_skeleton_schema_not_spec_1_0() {
     let output = lenslab(&["analyse", input.to_str().unwrap()]);
     let json = assert_success_json(&output);
 
-    assert_eq!(json["schema_version"], "0.1-field-curvature");
+    assert_eq!(json["schema_version"], "0.1-target-qa");
     assert_ne!(json["schema_version"], "1.0");
 }
 
@@ -807,6 +950,7 @@ fn analyse_measures_real_bayer_dng_fixture() {
     } else {
         assert!(!distortion["blockers"].as_array().unwrap().is_empty());
     }
+    assert_legal_target_qa(&json);
 
     let field_curvature = &json["field_curvature"]["summaries"][0];
     assert_eq!(field_curvature["status"], "blocked");

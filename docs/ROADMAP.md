@@ -13,15 +13,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Target QA / keystone gate** — estimate target tilt/keystone on suitable target frames before
-  trusting corner asymmetry, emit machine-readable QA blockers, and keep scene-only evidence from
-  becoming a hard copy verdict.
-
-## Remaining v0.1 Measurement Backlog
-
 - **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
   into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
   controlled.
+
+## Remaining v0.1 Measurement Backlog
+
 - **Verdict synthesis / plugin interpretation boundary** — emit enough structured evidence for a
   centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
   narrative judgement in the plugin.
@@ -124,6 +121,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   not-supported, blocked, exclusion, ambiguity, and numeric-error paths; CLI tests cover
   deterministic JSON, unknown-correction exclusion, stdout-empty failures, and real-fixture
   success/rejection behaviour — met by this change.
+- **Target QA / keystone gate** — `lenslab analyse <paths…>` emits skeleton schema `0.1-target-qa`
+  with frame-level target QA evidence from suitable periodic target geometry and group-level
+  decentring target-quality gating derived from that evidence. Unknown-correction observations
+  remain visible but cannot make group target quality pass, unsupported scene-like geometry reports
+  machine-readable blockers, and the command still emits no centred/decentred copy verdict, frame
+  role detection, MTF50, checkerboard calibration, artefacts, or plugin interpretation. _Done when:_
+  schema, core, CLI, deterministic-output, stdout-empty failure, and real-fixture tests cover
+  passed, gated, blocked, unknown-correction, and corrected-input rejection paths — met by this
+  change.
 
 ## Deferred / known gaps
 
