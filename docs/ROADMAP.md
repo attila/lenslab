@@ -23,6 +23,29 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   centred/decentred/inconclusive copy decision while keeping deterministic measurement in Rust and
   narrative judgement in the plugin.
 
+## Product-Grade Blockers
+
+These are the bars that turn the evidence engine into a product someone can trust for a keep/return
+decision. They may be implemented as separate PRs or folded into the backlog items above when the
+acceptance criteria are met.
+
+- **Trust calibration before hard verdicts** — a hard `centred`/`decentred` verdict must require a
+  gated target series, stable correction provenance, and structured evidence explaining why
+  decentring is separated from field curvature, framing tilt, lighting gradients, and scene content.
+  _Done when:_ the verdict JSON/plugin boundary refuses unsupported evidence, emits `inconclusive`
+  with reshoot guidance when capture is not good enough, and has tests covering the main
+  false-positive paths.
+- **Guided capture workflow** — users should not have to infer the shoot protocol from docs before
+  getting useful output. The tool/plugin must inspect a sample set, explain missing aperture/target
+  evidence, and coach the next capture without guessing from weak scene data. _Done when:_ a user
+  can point the tool at a folder, get either a valid measurement run or precise reshoot
+  instructions, and no copy verdict is produced from uncontrolled inputs alone.
+- **Golden schema and numeric regression corpus** — schema stability and metric accuracy need
+  durable fixtures, not only unit tests for blockers. _Done when:_ controlled synthetic/target
+  fixture sets assert known MTF/vignetting/CA/distortion/keystone/aperture-series values within
+  documented tolerances, and byte-stable golden JSON snapshots catch accidental public-contract
+  drift.
+
 ## In Progress
 
 - _(none yet)_
@@ -167,6 +190,12 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   speculatively. Revisit if a real batch, benchmark, or repeated review finding shows measurable
   time or memory cost. _Done when:_ a benchmark identifies a concrete bottleneck and the fix is
   measured, or confirms the simple implementation is adequate.
+- **Grouping key tolerance is still exact-float** — `analyse` currently groups by exact
+  `(lens_model, focal_length_mm, f_number)` equality. This is acceptable while those values come
+  from the current decoded EXIF path, but sidecars, overrides, mixed backends, or derived metadata
+  may produce semantically identical values with tiny representation differences. _Done when:_ the
+  input model for directory/sidecar/override support defines canonical aperture and focal-length
+  keys before broadening grouping semantics.
 - **Schema contract module split** — `lenslab-core/src/schema.rs` now carries the public JSON
   contract for every analysed evidence family in one large module. Keep the contract behaviour
   unchanged, but split the schema by evidence area once the next schema expansion makes review
