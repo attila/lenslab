@@ -173,6 +173,10 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   distortion. _Done when:_ checkerboard or equivalent controlled-target inputs produce a fitted
   distortion model with residuals and confidence gates, while uncontrolled scenes remain blocked or
   reported as non-calibrated evidence.
+- **Controlled optical validation corpus** — add synthetic and controlled-target fixture sets with
+  known MTF, vignetting, CA, distortion, keystone, and aperture-series behaviours, then assert
+  measured values within documented tolerances so metric evidence is calibrated beyond schema and
+  blocker correctness.
 - **CI workflow pins emit maintenance warnings** — GitHub Actions currently reports Node.js 20
   deprecation annotations for pinned actions such as `actions/checkout` and `mlugg/setup-zig`, and
   `taiki-e/install-action` falls back to `cargo-binstall` for `dprint@0.55.1` on the Ubuntu runner.
