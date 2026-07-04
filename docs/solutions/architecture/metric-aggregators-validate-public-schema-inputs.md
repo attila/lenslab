@@ -9,9 +9,11 @@ severity: medium
 applies_when:
   - Adding core metrics that consume public schema DTOs
   - Deriving aggregate evidence from frame-level measurements
+  - Deriving support or verdict-adjacent evidence from lower-level metrics
   - Treating excluded samples differently from included samples
   - Preserving frame-level blockers in group-level evidence
-tags: [metrics, schema, validation, aggregation, decentring, ca, blockers]
+  - Summarising aperture, focus, or repeat series before making support decisions
+tags: [metrics, schema, validation, aggregation, decentring, ca, blockers, copy-assessment]
 ---
 
 # Metric aggregators validate public schema inputs
@@ -52,6 +54,19 @@ an `unknown_corrections` exclusion while still carrying a structural blocker suc
 `unsupported_colour_channels` into the group summary. Preserve the blocker so consumers know why a
 measurement is unavailable, but do not count one frame as two excluded samples.
 
+Support or verdict-adjacent aggregators must also propagate blockers from prerequisite evidence.
+Checking only that a candidate value exists is not enough. If a pair summary carries
+`reliability_blockers`, or a countercheck such as field-curvature inference is `blocked`, the
+support layer should usually remain inconclusive and carry the blocker forward. Otherwise a later
+layer can turn untrusted evidence into hard support just because the lower-level metric still
+emitted a numeric mean for inspection.
+
+For cross-series decisions, do not average away contradiction before applying semantic gates.
+Compute the aggregate numbers, but also inspect the per-condition candidates that produced them. A
+real decentring signal should keep the same side/corner relationship across apertures; if aperture
+groups flip sign, the result is evidence against a fixed optical fault even when the average remains
+large.
+
 ## Why This Matters
 
 Exclusions describe why a valid sample did not contribute to an aggregate. They are not validation
@@ -76,6 +91,9 @@ stable representation such as `to_bits()` for lookup.
 - A future schema adds optional/null evidence fields that could mask invalid input.
 - A metric partitions multiple report groups before deriving cross-aperture or cross-series
   evidence.
+- A support layer consumes lower-level summaries with their own reliability blockers.
+- A series metric could hide sign flips, trend reversals, or other per-condition contradictions in a
+  mean value.
 
 ## Examples
 
@@ -100,6 +118,14 @@ implementation preserved first-seen summary order by scanning a `Vec<Partition>`
 which made the partitioning phase quadratic when every group belonged to a distinct lens/focal
 identity. The fix kept the `Vec` for deterministic output order and added a `HashMap` from validated
 partition identity to vector index.
+
+The copy-assessment support review added the support-layer case. The first implementation could emit
+hard support from a one-sample-per-aperture target ladder because it saw a pair mean and ignored
+`ReliabilityBlocker::InsufficientSamples`. It could also turn aperture sign flips into hard
+`supports_decentred` by averaging before checking consistency, and it treated blocked
+field-curvature counterchecks as passed unless the blocker was ambiguous peak. The fix propagated
+pair reliability blockers and field-curvature blockers into copy-assessment blockers, and required
+per-aperture sign consistency before hard decentred support.
 
 ## Related
 

@@ -1,5 +1,6 @@
 pub mod acutance;
 pub mod ca;
+pub mod copy_assessment;
 pub mod decentring;
 pub mod distortion;
 pub mod field_curvature;

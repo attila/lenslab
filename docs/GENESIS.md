@@ -3,9 +3,9 @@
 > Single entry point for a Claude Code (or human) session picking this project up cold. Read this
 > top to bottom, then `docs/SPEC.md` → `docs/ALGORITHMS.md` → `docs/DECISIONS.md` →
 > `docs/SKILL_PLUGIN.md`. The Rust workspace now contains `inspect`, `contact`, image/zones, real
-> fixtures, and an explicit-file `analyse` evidence skeleton through schema `0.1-target-qa`. Full
-> verdict analysis remains future work. The validated Python/C prototype under
-> `reference/prototype/` remains the algorithm reference.
+> fixtures, and an explicit-file `analyse` evidence skeleton through schema
+> `0.1-copy-assessment-support`. Full plugin verdict interpretation remains future work. The
+> validated Python/C prototype under `reference/prototype/` remains the algorithm reference.
 
 ## TL;DR
 
@@ -96,8 +96,9 @@ lenslab/
 4. Acutance metric + `analyse` skeleton emitting JSON.
 5. Decentring aggregate + first QA gate.
 6. Vignetting (aperture-difference method). CA. Distortion. Field-curvature inference. Target QA /
-   keystone gate. **Current implementation reaches evidence-only metric output through target QA; no
-   copy verdict, MTF50, report artefacts, frame-role detection, or plugin exists yet.**
+   keystone gate. Copy assessment support. **Current implementation reaches evidence-only metric
+   output through copy support; no human copy verdict, MTF50, report artefacts, frame-role
+   detection, or plugin exists yet.**
 7. Slanted-edge MTF50 for target shots (heaviest; acutance is the fallback and already works).
 8. Synthetic fixtures with injected MTF/vignette/distortion → assert measured values within
    tolerance. **Build these early enough to validate steps 4–6.**
