@@ -33,6 +33,11 @@ Run this before a PR is considered merge-ready.
 5. Gates:
    - Run `just ci` before claiming done.
    - Run `just test-fixtures` after decode, fixture, or CI changes.
+   - For integration-test targets, use Cargo's target selector rather than a bare test-name filter,
+     which can compile the integration test binary while running zero tests:
+     ```sh
+     cargo test -p lenslab-cli --test analyse_cli
+     ```
 
 ## Reporting
 

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-distortion-ca-unsupported";
+pub const ANALYSE_SCHEMA_VERSION: &str = "0.1-field-curvature";
 const TEXTURE_USABLE_THRESHOLD: f32 = 0.15;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -8,6 +8,7 @@ pub struct AnalyseReport {
     pub schema_version: &'static str,
     pub tool_version: String,
     pub inputs: Vec<AnalyseInput>,
+    pub field_curvature: FieldCurvatureEvidence,
     pub groups: Vec<AnalyseGroup>,
 }
 
@@ -16,12 +17,14 @@ impl AnalyseReport {
     pub fn new(
         tool_version: impl Into<String>,
         inputs: Vec<AnalyseInput>,
+        field_curvature: FieldCurvatureEvidence,
         groups: Vec<AnalyseGroup>,
     ) -> Self {
         Self {
             schema_version: ANALYSE_SCHEMA_VERSION,
             tool_version: tool_version.into(),
             inputs,
+            field_curvature,
             groups,
         }
     }
@@ -51,6 +54,38 @@ pub struct AnalyseGroup {
     pub ca_lateral: CaLateralEvidence,
     pub distortion: DistortionEvidence,
     pub frames: Vec<FrameMeasurement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FieldCurvatureEvidence {
+    pub method: FieldCurvatureMethod,
+    pub summaries: Vec<FieldCurvatureSummary>,
+}
+
+impl FieldCurvatureEvidence {
+    #[must_use]
+    pub fn not_assessed() -> Self {
+        Self {
+            method: FieldCurvatureMethod::InferredApertureLagFromMeasuredAcutance,
+            summaries: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FieldCurvatureSummary {
+    pub lens_model: Option<String>,
+    pub focal_length_mm: Option<f32>,
+    pub status: FieldCurvatureStatus,
+    pub eligible_aperture_groups: usize,
+    pub excluded_aperture_groups: usize,
+    pub included_f_numbers: Vec<f32>,
+    pub centre_peak_f_number: Option<f32>,
+    pub corner_mean_peak_f_number: Option<f32>,
+    pub lag_stops: Option<f32>,
+    pub lag_threshold_stops: f32,
+    pub blockers: Vec<FieldCurvatureBlocker>,
+    pub excluded: Vec<ExclusionCount>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -635,6 +670,31 @@ pub enum DistortionMethod {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum FieldCurvatureMethod {
+    InferredApertureLagFromMeasuredAcutance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FieldCurvatureStatus {
+    Supported,
+    NotSupported,
+    Blocked,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FieldCurvatureBlocker {
+    InsufficientApertureSeries,
+    MissingLensFocalIdentity,
+    MissingAperture,
+    AmbiguousPeak,
+    LowTexture,
+    UnknownCorrections,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DistortionOrientation {
     Horizontal,
     Vertical,
@@ -745,8 +805,9 @@ mod tests {
         CaLateralMeasurements, CorrectionStatus, DecentringEvidence, DerivedNumericMeasurement,
         DistortionBlocker, DistortionCandidate, DistortionEvidence, DistortionMeasurement,
         DistortionMeasurements, DistortionOrientation, DistortionReferenceSide, ExclusionCount,
-        ExclusionReason, FrameMeasurement, LeftRightDecentring, Measurements, PairId, PairSummary,
-        ReliabilityBlocker, SharpnessMeasurements, SourceKind, VignettingBlocker,
+        ExclusionReason, FieldCurvatureEvidence, FieldCurvatureMethod, FieldCurvatureStatus,
+        FieldCurvatureSummary, FrameMeasurement, LeftRightDecentring, Measurements, PairId,
+        PairSummary, ReliabilityBlocker, SharpnessMeasurements, SourceKind, VignettingBlocker,
         VignettingCornerValues, VignettingEvidence, VignettingMeasurements, VignettingMethod,
         VignettingNumericMeasurement, VignettingSymmetry, VignettingZoneMeasurements,
         ZoneMeasurement, ZoneMeasurements,
@@ -914,6 +975,29 @@ mod tests {
         )
     }
 
+    fn field_curvature() -> FieldCurvatureEvidence {
+        FieldCurvatureEvidence {
+            method: FieldCurvatureMethod::InferredApertureLagFromMeasuredAcutance,
+            summaries: vec![FieldCurvatureSummary {
+                lens_model: Some("50mm".to_owned()),
+                focal_length_mm: Some(50.0),
+                status: FieldCurvatureStatus::Supported,
+                eligible_aperture_groups: 3,
+                excluded_aperture_groups: 1,
+                included_f_numbers: vec![5.6, 8.0, 11.0],
+                centre_peak_f_number: Some(5.6),
+                corner_mean_peak_f_number: Some(11.0),
+                lag_stops: Some(1.949_637),
+                lag_threshold_stops: 1.75,
+                blockers: vec![],
+                excluded: vec![ExclusionCount {
+                    reason: ExclusionReason::UnknownCorrections,
+                    count: 1,
+                }],
+            }],
+        }
+    }
+
     #[test]
     fn serialises_confirmed_uncorrected_skeleton_in_field_order() {
         let report = AnalyseReport::new(
@@ -930,6 +1014,7 @@ mod tests {
                 corrections: CorrectionStatus::ConfirmedUncorrected,
                 correction_provenance: None,
             }],
+            field_curvature(),
             vec![AnalyseGroup {
                 lens_model: Some("50mm".to_owned()),
                 focal_length_mm: Some(50.0),
@@ -945,16 +1030,52 @@ mod tests {
         let json = serde_json::to_string_pretty(&report).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-distortion-ca-unsupported\","));
-        assert_eq!(value["schema_version"], "0.1-distortion-ca-unsupported");
+        assert!(json.starts_with("{\n  \"schema_version\": \"0.1-field-curvature\","));
+        assert_eq!(value["schema_version"], "0.1-field-curvature");
         assert_eq!(value["inputs"][0]["source_kind"], "cfa");
         assert_eq!(value["inputs"][0]["corrections"], "confirmed_uncorrected");
+        assert_report_field_order(&json);
         assert_group_field_order(&json);
+        assert_field_curvature_json(&value);
         assert_decentring_json(&value);
         assert_frame_measurement_json(&value);
         assert_vignetting_json(&value);
         assert_ca_json(&value);
         assert_distortion_json(&value);
+    }
+
+    fn assert_report_field_order(json: &str) {
+        assert!(
+            json.find("\"inputs\"").expect("inputs are serialised")
+                < json
+                    .find("\"field_curvature\"")
+                    .expect("field curvature is serialised")
+        );
+        assert!(
+            json.find("\"field_curvature\"")
+                .expect("field curvature is serialised")
+                < json.find("\"groups\"").expect("groups are serialised")
+        );
+    }
+
+    fn assert_field_curvature_json(value: &serde_json::Value) {
+        let evidence = &value["field_curvature"];
+        assert_eq!(
+            evidence["method"],
+            "inferred_aperture_lag_from_measured_acutance"
+        );
+        let summary = &evidence["summaries"][0];
+        assert_eq!(summary["status"], "supported");
+        assert_eq!(summary["lens_model"], "50mm");
+        assert_eq!(summary["focal_length_mm"], 50.0);
+        assert_eq!(summary["eligible_aperture_groups"], 3);
+        assert_eq!(summary["excluded_aperture_groups"], 1);
+        assert_eq!(summary["included_f_numbers"][0], 5.6);
+        assert_eq!(summary["centre_peak_f_number"], 5.6);
+        assert_eq!(summary["corner_mean_peak_f_number"], 11.0);
+        assert_eq!(summary["lag_threshold_stops"], 1.75);
+        assert_eq!(summary["excluded"][0]["reason"], "unknown_corrections");
+        assert!(summary["blockers"].as_array().unwrap().is_empty());
     }
 
     fn assert_group_field_order(json: &str) {
@@ -1132,6 +1253,7 @@ mod tests {
         let report = AnalyseReport::new(
             "0.1.0",
             vec![],
+            FieldCurvatureEvidence::not_assessed(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1169,7 +1291,12 @@ mod tests {
 
     #[test]
     fn serialises_no_future_verdict_or_artifact_fields() {
-        let report = AnalyseReport::new("0.1.0", vec![], vec![]);
+        let report = AnalyseReport::new(
+            "0.1.0",
+            vec![],
+            FieldCurvatureEvidence::not_assessed(),
+            vec![],
+        );
         let value: serde_json::Value =
             serde_json::from_str(&serde_json::to_string_pretty(&report).unwrap()).unwrap();
 
@@ -1181,7 +1308,6 @@ mod tests {
             "decentred",
             "confidence",
             "artifacts",
-            "field_curvature",
             "mtf50",
             "target_role",
             "checkerboard_calibration",
@@ -1196,6 +1322,7 @@ mod tests {
         let report = AnalyseReport::new(
             "0.1.0",
             vec![],
+            FieldCurvatureEvidence::not_assessed(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1252,6 +1379,7 @@ mod tests {
                     "TIFF metadata has no reliable correction flag".to_owned(),
                 ),
             }],
+            FieldCurvatureEvidence::not_assessed(),
             vec![AnalyseGroup {
                 lens_model: None,
                 focal_length_mm: None,
@@ -1373,6 +1501,7 @@ mod tests {
         let report = AnalyseReport::new(
             "0.1.0",
             vec![],
+            FieldCurvatureEvidence::not_assessed(),
             vec![
                 AnalyseGroup {
                     lens_model: None,

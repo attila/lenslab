@@ -13,15 +13,12 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Field-curvature inference** — infer corner-lag behaviour from sharpness across aperture while
-  preserving the distinction from measured focus-bracket curvature.
+- **Target QA / keystone gate** — estimate target tilt/keystone on suitable target frames before
+  trusting corner asymmetry, emit machine-readable QA blockers, and keep scene-only evidence from
+  becoming a hard copy verdict.
 
 ## Remaining v0.1 Measurement Backlog
 
-- **Target QA / keystone gate** — estimate target tilt before trusting corner asymmetry and mark
-  gated target frames without promoting scene-only evidence to a copy verdict. This should define
-  reusable target-geometry primitives for later calibrated distortion/checkerboard work, not just a
-  one-off QA flag.
 - **Controlled vignetting reference + symmetry assessment** — turn the existing blocked machinery
   into aperture-series optical deltas and radial-symmetry evidence when the input set proves it is
   controlled.
@@ -118,6 +115,15 @@ to **Done** in the same change that completes it, with the commit or pull-reques
   when:_ synthetic tests cover known straight-line bow, weak-reference inference, no-reference
   blockers, deterministic output, and stdout-empty failures; real fixture tests keep Bayer success
   and X-Trans/corrected rejection behaviour intact — met by this change.
+- **Field-curvature inference** — `lenslab analyse <paths…>` emits skeleton schema
+  `0.1-field-curvature` with top-level inferred aperture-lag evidence derived from measured
+  centre/corner acutance across aperture groups. Unknown-correction inputs remain visible at frame
+  level but excluded from inference, missing or weak evidence reports blockers, and focus-bracket
+  measurement remains deferred to v0.2. It still emits no copy verdict, focus-shift quantity, MTF50,
+  artefacts, target role, or plugin interpretation. _Done when:_ core tests cover supported,
+  not-supported, blocked, exclusion, ambiguity, and numeric-error paths; CLI tests cover
+  deterministic JSON, unknown-correction exclusion, stdout-empty failures, and real-fixture
+  success/rejection behaviour — met by this change.
 
 ## Deferred / known gaps
 

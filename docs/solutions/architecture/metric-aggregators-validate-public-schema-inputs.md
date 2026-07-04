@@ -62,12 +62,20 @@ gate ordering rather than data validity.
 Keeping validation in the metric module also preserves crate boundaries: `lenslab-cli` orchestrates
 measurement and grouping, while `lenslab-core` owns the rules that make derived evidence safe.
 
+Cross-group aggregators that partition by lens, focal length, aperture, or similar public DTO fields
+should preserve deterministic first-seen output order without falling back to repeated linear
+partition scans. Keep a `Vec` for serialisation order when that matters, but use an index map for
+lookup once the metric can see many groups. Key floats only after finite-value validation, using a
+stable representation such as `to_bits()` for lookup.
+
 ## When to Apply
 
 - A metric accepts `schema` DTOs instead of private validated domain structs.
 - Public DTO fields can be constructed outside the normal CLI path.
 - A metric has include/exclude gates before computing derived values.
 - A future schema adds optional/null evidence fields that could mask invalid input.
+- A metric partitions multiple report groups before deriving cross-aperture or cross-series
+  evidence.
 
 ## Examples
 
@@ -86,6 +94,12 @@ no colour channels for CA measurement, so frame-level evidence carries
 excluded from aggregation as `unknown_corrections`. The group summary must retain
 `unsupported_colour_channels` as a blocker without adding a second exclusion count for the same
 frame.
+
+The field-curvature inference review added the cross-group partitioning case. The first
+implementation preserved first-seen summary order by scanning a `Vec<Partition>` for each group,
+which made the partitioning phase quadratic when every group belonged to a distinct lens/focal
+identity. The fix kept the `Vec` for deterministic output order and added a `HashMap` from validated
+partition identity to vector index.
 
 ## Related
 

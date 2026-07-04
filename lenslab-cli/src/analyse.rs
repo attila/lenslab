@@ -7,6 +7,7 @@ use lenslab_core::metrics::acutance::measure_acutance;
 use lenslab_core::metrics::ca::{aggregate_group_ca, measure_lateral_ca};
 use lenslab_core::metrics::decentring::aggregate_left_right_decentring;
 use lenslab_core::metrics::distortion::{aggregate_group_distortion, measure_distortion};
+use lenslab_core::metrics::field_curvature::infer_field_curvature;
 use lenslab_core::metrics::vignetting::{
     aggregate_group_vignetting, apply_reference_relative_vignetting, measured_falloff,
     median_luminance,
@@ -63,7 +64,15 @@ pub fn write_analysis(paths: &[PathBuf]) -> anyhow::Result<()> {
         });
     }
 
-    let report = AnalyseReport::new(env!("CARGO_PKG_VERSION"), inputs, group_frames(frames)?);
+    let analyse_groups = group_frames(frames)?;
+    let field_curvature = infer_field_curvature(&analyse_groups)
+        .context("failed to infer field-curvature evidence")?;
+    let report = AnalyseReport::new(
+        env!("CARGO_PKG_VERSION"),
+        inputs,
+        field_curvature,
+        analyse_groups,
+    );
     let mut stdout = std::io::stdout().lock();
     serde_json::to_writer_pretty(&mut stdout, &report)?;
     writeln!(stdout)?;
@@ -356,14 +365,20 @@ struct GroupedFrames {
 #[cfg(test)]
 mod tests {
     use super::{AnalysedFrame, GroupKey, group_frames};
+    use lenslab_core::metrics::field_curvature::infer_field_curvature;
     use lenslab_core::schema::{
-        CaBlocker, CaLateralMeasurements, CornerFalloff, FrameMeasurement, Measurements,
-        SharpnessMeasurements, VignettingMeasurements, VignettingNumericMeasurement,
+        CaBlocker, CaLateralMeasurements, CornerFalloff, FieldCurvatureStatus, FrameMeasurement,
+        Measurements, SharpnessMeasurements, VignettingMeasurements, VignettingNumericMeasurement,
         VignettingZoneMeasurements, ZoneMeasurement, ZoneMeasurements,
     };
 
     fn frame(input_index: usize) -> FrameMeasurement {
-        let zone = ZoneMeasurement::measured(1.0, 0.2, 1.0, true).unwrap();
+        frame_with_sharpness(input_index, 1.0, 1.0)
+    }
+
+    fn frame_with_sharpness(input_index: usize, centre: f32, corners: f32) -> FrameMeasurement {
+        let centre_zone = ZoneMeasurement::measured(centre, 0.2, 1.0, true).unwrap();
+        let corner_zone = ZoneMeasurement::measured(corners, 0.2, 1.0, true).unwrap();
         FrameMeasurement {
             input_index,
             path: format!("frame-{input_index}.tif"),
@@ -371,11 +386,11 @@ mod tests {
             measurements: Measurements {
                 sharpness: SharpnessMeasurements {
                     zones: ZoneMeasurements::from_ordered([
-                        zone.clone(),
-                        zone.clone(),
-                        zone.clone(),
-                        zone.clone(),
-                        zone,
+                        centre_zone,
+                        corner_zone.clone(),
+                        corner_zone.clone(),
+                        corner_zone.clone(),
+                        corner_zone,
                     ]),
                 },
                 vignetting: VignettingMeasurements {
@@ -404,6 +419,18 @@ mod tests {
         AnalysedFrame {
             key,
             measurement: frame(input_index),
+        }
+    }
+
+    fn analysed_frame_with_sharpness(
+        input_index: usize,
+        key: GroupKey,
+        centre: f32,
+        corners: f32,
+    ) -> AnalysedFrame {
+        AnalysedFrame {
+            key,
+            measurement: frame_with_sharpness(input_index, centre, corners),
         }
     }
 
@@ -436,5 +463,52 @@ mod tests {
         ));
         assert_eq!(groups[1].lens_model.as_deref(), Some("35mm"));
         assert_eq!(groups[1].frames[0].input_index, 1);
+    }
+
+    #[test]
+    fn grouped_confirmed_uncorrected_aperture_lag_supports_field_curvature() {
+        let lens = Some("50mm".to_owned());
+        let groups = group_frames(vec![
+            analysed_frame_with_sharpness(
+                0,
+                GroupKey {
+                    lens_model: lens.clone(),
+                    focal_length_mm: Some(50.0),
+                    f_number: Some(5.6),
+                },
+                2.0,
+                1.0,
+            ),
+            analysed_frame_with_sharpness(
+                1,
+                GroupKey {
+                    lens_model: lens.clone(),
+                    focal_length_mm: Some(50.0),
+                    f_number: Some(8.0),
+                },
+                1.5,
+                1.5,
+            ),
+            analysed_frame_with_sharpness(
+                2,
+                GroupKey {
+                    lens_model: lens,
+                    focal_length_mm: Some(50.0),
+                    f_number: Some(11.0),
+                },
+                1.0,
+                2.0,
+            ),
+        ])
+        .unwrap();
+
+        let evidence = infer_field_curvature(&groups).unwrap();
+
+        assert_eq!(
+            evidence.summaries[0].status,
+            FieldCurvatureStatus::Supported
+        );
+        assert_eq!(evidence.summaries[0].centre_peak_f_number, Some(5.6));
+        assert_eq!(evidence.summaries[0].corner_mean_peak_f_number, Some(11.0));
     }
 }
