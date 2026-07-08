@@ -13,10 +13,9 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Guided capture workflow / plugin interpretation boundary** — turn the `copy_assessment` evidence
-  into user-facing coaching and narrative interpretation without moving judgement into the CLI. The
-  first slice should inspect an explicit or folder-backed capture set, explain why support is
-  centred/decentred/inconclusive, and coach the smallest reshoot when hard support is blocked.
+- **Golden schema and numeric regression corpus** — turn the current evidence contracts into durable
+  public fixtures: byte-stable JSON snapshots plus controlled synthetic/target numeric cases that
+  catch schema drift and metric regressions before plugin or report work builds on them.
 
 ## Remaining v0.1 Measurement Backlog
 
@@ -177,6 +176,17 @@ acceptance criteria are met.
   verdict omissions, decoded TIFF tests keep unknown-correction exclusion honest, and
   `just test-local-copy-assessment` provides a local-only real-DNG product-realism gate that skips
   when unconfigured — met by this change.
+- **Portable guided capture skill / Claude plugin adapter** — `agent-skills/lens-test` now owns the
+  shared product skill core for explicit-file or flat-folder capture preparation, representative
+  `lenslab inspect` preflight, `lenslab analyse <paths…>` interpretation, centred/decentred/
+  inconclusive support language, and prioritised reshoot coaching from `copy_assessment.blockers`
+  and `copy_assessment.reshoot`. `plugin/` provides a thin Claude plugin adapter and manifest
+  without duplicating the shared interpretation contract. Schema-real example JSON/checklist pairs
+  cover supported centred, supported decentred, target-QA blocked inconclusive, and incomplete
+  aperture-ladder inconclusive cases. _Done when:_ the shared skill core is the single source of
+  truth, the Claude adapter stays thin, examples parse as JSON and include at least one full current
+  `AnalyseReport` shape, and manual UAT/dry-review instructions are present without claiming
+  keep/return advice, generated reports, recursive folder discovery, or non-Claude adapters.
 
 ## Deferred / known gaps
 

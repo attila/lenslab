@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1-copy-assessment-support",
+  "tool_version": "0.1.0",
+  "inputs": [],
+  "field_curvature": {
+    "method": "inferred_aperture_lag_from_measured_acutance",
+    "summaries": []
+  },
+  "copy_assessment": {
+    "state": "inconclusive",
+    "method": "derived_from_target_qa_acutance_and_field_curvature",
+    "hard_support_eligible": false,
+    "lens_model": "Example 50mm",
+    "focal_length_mm": 50.0,
+    "included_aperture_groups": [5.6],
+    "evidence": {
+      "target_quality": {
+        "status": "passed",
+        "blockers": []
+      },
+      "correction_provenance": {
+        "status": "passed",
+        "blockers": []
+      },
+      "aperture_series": {
+        "status": "blocked",
+        "blockers": ["insufficient_aperture_series"]
+      },
+      "left_right_consistency": {
+        "status": "blocked",
+        "blockers": ["insufficient_aperture_series"]
+      },
+      "field_curvature_counterevidence": {
+        "status": "passed",
+        "blockers": []
+      },
+      "mean_top_pair_delta": null,
+      "mean_bottom_pair_delta": null,
+      "max_abs_pair_delta": null,
+      "centred_threshold": 0.08,
+      "decentred_threshold": 0.18
+    },
+    "blockers": ["insufficient_aperture_series"],
+    "reshoot": ["add_aperture_ladder"]
+  },
+  "groups": []
+}

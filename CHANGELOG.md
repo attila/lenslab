@@ -36,6 +36,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Copy assessment support evidence using schema `0.1-copy-assessment-support`, including target-QA
   gated left/right acutance asymmetry, aperture-series sufficiency, field-curvature counterevidence,
   blockers, and reshoot guidance without emitting a human copy verdict.
+- A portable `lens-test` product skill core with a thin Claude plugin adapter, interpreting
+  `copy_assessment` evidence into centred/decentred/inconclusive support language and prioritised
+  reshoot coaching from shared examples/checklists.
 - Checksum-pinned real-camera DNG fixtures and fixture tests for Bayer and X-Trans decode behaviour.
 - CI and release workflows covering formatting, clippy, tests, dependency checks, docs, fixture
   tests, four-target cross-compilation, and owner-approved GitHub Releases.
