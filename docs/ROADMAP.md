@@ -236,6 +236,16 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   locality worse than centralised reading. _Done when:_ serde output remains byte-stable for
   existing fixtures, schema versioning stays central, and new measurement families can add DTOs
   without editing an oversized catch-all module.
+- **Claude plugin marketplace distribution** — the current `plugin/` tree is a local Claude adapter
+  scaffold, not a self-contained marketplace install. Revisit when lenslab is ready to distribute
+  the guided capture flow to users through Claude Code. _Done when:_ the plugin has a marketplace
+  definition, the install path is tested through Claude's marketplace flow rather than only
+  `--plugin-dir`, and the packaging story keeps one source of truth for the shared
+  `agent-skills/lens-test` core. Candidate packaging shapes: generate a self-contained Claude plugin
+  package by copying the shared core into the plugin artefact at release time; make `plugin/` the
+  source of truth and point other harnesses at it; or introduce a dedicated package root that emits
+  Claude, Codex, opencode, and future harness adapters. Do not bundle CLI installation here until
+  the separate CLI release/distribution story is settled.
 - **Mixed scene/target copy scoring** — option 3 from the copy-assessment planning remains
   intentionally deferred. Scene or mixed captures may become useful as soft evidence after hard
   target-series support exists, but they must not promote uncontrolled scene data to a hard copy
