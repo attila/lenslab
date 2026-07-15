@@ -1,7 +1,8 @@
 # Reshoot Coaching
 
 Use `copy_assessment.blockers` and `copy_assessment.reshoot` together. Blockers explain why support
-is blocked; reshoot values identify the next capture action.
+is blocked; reshoot values identify the next capture action. A blocker need not have a matching
+reshoot value.
 
 ## Priority Order
 
@@ -43,5 +44,7 @@ is blocked; reshoot values identify the next capture action.
 
 ## Output Rule
 
-Show the top blockers in order with one concrete action each. Do not paste the full shooting guide
-unless the user asks or the capture is missing the protocol entirely.
+Show the top blockers in order. Pair them only with actions present in `copy_assessment.reshoot`.
+When that list is empty, explain the blockers and say that the CLI prescribed no capture action; do
+not invent one. Do not paste the full shooting guide unless the user asks or the capture is missing
+the protocol entirely.

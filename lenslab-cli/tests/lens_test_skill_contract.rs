@@ -29,6 +29,38 @@ fn assert_file(root: &Path, relative: &str) {
     assert!(root.join(relative).is_file(), "missing file: {relative}");
 }
 
+fn assert_missing_lens_identity_example(report: &Value) {
+    assert!(
+        !report["inputs"]
+            .as_array()
+            .expect("inputs is an array")
+            .is_empty(),
+        "missing-identity example has CLI inputs"
+    );
+    let groups = report["groups"].as_array().expect("groups is an array");
+    assert!(
+        groups
+            .iter()
+            .any(|group| group["lens_model"].is_null() || group["focal_length_mm"].is_null()),
+        "missing-identity example has a group without complete lens identity"
+    );
+    assert_eq!(
+        report["copy_assessment"]["blockers"][0],
+        "missing_lens_focal_identity"
+    );
+    assert!(
+        report["copy_assessment"]["reshoot"]
+            .as_array()
+            .expect("reshoot is an array")
+            .is_empty(),
+        "missing-identity example has no CLI-provided reshoot advice"
+    );
+}
+
+fn is_missing_lens_identity_example(path: &Path) -> bool {
+    path.file_stem().and_then(|stem| stem.to_str()) == Some("inconclusive-missing-lens-identity")
+}
+
 fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
     for entry in fs::read_dir(dir).unwrap_or_else(|error| {
         panic!("read directory {}: {error}", dir.display());
@@ -67,8 +99,16 @@ fn claude_plugin_is_a_thin_adapter_over_the_shared_skill() {
 
     let adapter = read_text(&root, "plugin/skills/lens-test/SKILL.md");
     assert!(
-        adapter.contains("agent-skills/lens-test/SKILL.md"),
+        adapter.contains("${CLAUDE_PLUGIN_ROOT}/../agent-skills/lens-test/SKILL.md"),
         "Claude adapter points at the shared skill core"
+    );
+    assert!(
+        adapter.contains("${CLAUDE_PLUGIN_ROOT}/../agent-skills/lens-test/references/"),
+        "Claude adapter points at the shared skill references"
+    );
+    assert!(
+        !adapter.contains("${CLAUDE_PROJECT_DIR}/agent-skills"),
+        "Claude adapter must resolve shared files relative to the plugin"
     );
     for duplicated_core_rule in [
         "## Interpretation",
@@ -115,6 +155,7 @@ fn golden_examples_cover_supported_and_inconclusive_outcomes() {
     let examples_dir = root.join("agent-skills/lens-test/references/examples");
     let mut states = Vec::new();
     let mut json_examples = Vec::new();
+    let mut has_inconclusive_without_reshoot = false;
 
     for entry in fs::read_dir(&examples_dir).expect("read examples directory") {
         let path = entry.expect("read examples entry").path();
@@ -169,6 +210,10 @@ fn golden_examples_cover_supported_and_inconclusive_outcomes() {
             }))
             .unwrap_or_else(|error| panic!("parse {}: {error}", relative.display()));
 
+        if is_missing_lens_identity_example(&example) {
+            assert_missing_lens_identity_example(&report);
+        }
+
         assert_eq!(
             report["schema_version"],
             EXPECTED_SCHEMA_VERSION,
@@ -198,14 +243,10 @@ fn golden_examples_cover_supported_and_inconclusive_outcomes() {
                 "{} has blockers for inconclusive outcomes",
                 relative.display()
             );
-            assert!(
-                !report["copy_assessment"]["reshoot"]
-                    .as_array()
-                    .expect("reshoot is an array")
-                    .is_empty(),
-                "{} has reshoot advice for inconclusive outcomes",
-                relative.display()
-            );
+            has_inconclusive_without_reshoot |= report["copy_assessment"]["reshoot"]
+                .as_array()
+                .expect("reshoot is an array")
+                .is_empty();
         }
     }
 
@@ -214,4 +255,8 @@ fn golden_examples_cover_supported_and_inconclusive_outcomes() {
     assert!(states.contains(&"supports_centred".to_owned()));
     assert!(states.contains(&"supports_decentred".to_owned()));
     assert!(states.contains(&"inconclusive".to_owned()));
+    assert!(
+        has_inconclusive_without_reshoot,
+        "golden examples cover inconclusive outcomes without CLI-provided reshoot advice"
+    );
 }

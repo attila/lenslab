@@ -15,7 +15,8 @@ Run this before treating the skill as ready.
 2. Confirm the skill expands only direct children and does not pass the folder directly to
    `lenslab analyse`.
 3. Confirm the skill runs `lenslab inspect <representative-file>` before `lenslab analyse`.
-4. Confirm inconclusive output gives prioritised reshoot actions rather than a hard copy verdict.
+4. Confirm inconclusive output explains the blockers and gives only actions present in
+   `copy_assessment.reshoot`; an empty list must not produce an invented action.
 
 If live plugin execution is unavailable, record that as residual risk. A dry review can check the
 instructions, but it does not prove the packaged skill is usable by an agent runtime.

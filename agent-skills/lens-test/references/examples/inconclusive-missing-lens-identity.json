@@ -1,0 +1,531 @@
+{
+  "schema_version": "0.1-copy-assessment-support",
+  "tool_version": "0.1.0",
+  "inputs": [
+    {
+      "index": 0,
+      "path": "example-missing-lens-identity.tif",
+      "source_kind": "rgb",
+      "camera_make": null,
+      "camera_model": null,
+      "lens_model": null,
+      "focal_length_mm": null,
+      "f_number": null,
+      "corrections": "accepted_unknown_corrections",
+      "correction_provenance": "TIFF input is already-demosaiced RGB; baked-in corrections cannot be ruled out from the container alone (docs/DECISIONS.md D8)"
+    }
+  ],
+  "field_curvature": {
+    "method": "inferred_aperture_lag_from_measured_acutance",
+    "summaries": [
+      {
+        "lens_model": null,
+        "focal_length_mm": null,
+        "status": "blocked",
+        "eligible_aperture_groups": 0,
+        "excluded_aperture_groups": 1,
+        "included_f_numbers": [],
+        "centre_peak_f_number": null,
+        "corner_mean_peak_f_number": null,
+        "lag_stops": null,
+        "lag_threshold_stops": 1.75,
+        "blockers": [
+          "missing_lens_focal_identity",
+          "unknown_corrections"
+        ],
+        "excluded": [
+          {
+            "reason": "unknown_corrections",
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  "copy_assessment": {
+    "state": "inconclusive",
+    "method": "derived_from_target_qa_acutance_and_field_curvature",
+    "hard_support_eligible": false,
+    "lens_model": null,
+    "focal_length_mm": null,
+    "included_aperture_groups": [],
+    "evidence": {
+      "target_quality": {
+        "status": "blocked",
+        "blockers": [
+          "no_controlled_target_series"
+        ]
+      },
+      "correction_provenance": {
+        "status": "blocked",
+        "blockers": [
+          "no_controlled_target_series"
+        ]
+      },
+      "aperture_series": {
+        "status": "blocked",
+        "blockers": [
+          "no_controlled_target_series"
+        ]
+      },
+      "left_right_consistency": {
+        "status": "blocked",
+        "blockers": [
+          "no_controlled_target_series"
+        ]
+      },
+      "field_curvature_counterevidence": {
+        "status": "blocked",
+        "blockers": [
+          "no_controlled_target_series"
+        ]
+      },
+      "mean_top_pair_delta": null,
+      "mean_bottom_pair_delta": null,
+      "max_abs_pair_delta": null,
+      "centred_threshold": 0.08,
+      "decentred_threshold": 0.18
+    },
+    "blockers": [
+      "missing_lens_focal_identity"
+    ],
+    "reshoot": []
+  },
+  "groups": [
+    {
+      "lens_model": null,
+      "focal_length_mm": null,
+      "f_number": null,
+      "decentring": {
+        "method": "derived_from_measured_acutance",
+        "target_quality": {
+          "status": "blocked",
+          "method": null,
+          "keystone_pct": null,
+          "tilt_axis": null,
+          "gate_threshold_pct": 1.5,
+          "assessed_frames": 0,
+          "blocked_frames": 1,
+          "blockers": [
+            "unknown_corrections",
+            "no_suitable_target_reference"
+          ]
+        },
+        "left_right": {
+          "top_pair": {
+            "id": "top_left_minus_top_right",
+            "included_samples": 0,
+            "excluded_samples": 1,
+            "mean_delta": null,
+            "scatter": null,
+            "reliability_blockers": [
+              "insufficient_samples"
+            ],
+            "excluded": [
+              {
+                "reason": "unknown_corrections",
+                "count": 1
+              }
+            ]
+          },
+          "bottom_pair": {
+            "id": "bottom_left_minus_bottom_right",
+            "included_samples": 0,
+            "excluded_samples": 1,
+            "mean_delta": null,
+            "scatter": null,
+            "reliability_blockers": [
+              "insufficient_samples"
+            ],
+            "excluded": [
+              {
+                "reason": "unknown_corrections",
+                "count": 1
+              }
+            ]
+          }
+        }
+      },
+      "vignetting": {
+        "method": "measured_luminance_ratio",
+        "included_samples": 0,
+        "excluded_samples": 1,
+        "reference_f_number": null,
+        "raw_corner_mean_stops": null,
+        "optical_delta_from_reference_stops": null,
+        "blockers": [
+          "insufficient_aperture_series",
+          "unknown_corrections",
+          "missing_aperture"
+        ],
+        "warnings": [
+          "missing_lens_focal_identity"
+        ],
+        "excluded": [
+          {
+            "reason": "unknown_corrections",
+            "count": 1
+          }
+        ],
+        "symmetry": {
+          "status": "blocked",
+          "mean_optical_delta_stops": null,
+          "max_corner_deviation_stops": null,
+          "left_right_residual_stops": null,
+          "top_bottom_residual_stops": null,
+          "persistent_raw_bias_stops": null,
+          "repeat_scatter_stops": null,
+          "blockers": [
+            "insufficient_aperture_series",
+            "unknown_corrections",
+            "missing_aperture"
+          ]
+        }
+      },
+      "ca_lateral": {
+        "top_left": {
+          "included_samples": 0,
+          "excluded_samples": 1,
+          "mean_shift": null,
+          "scatter": null,
+          "blockers": [
+            "insufficient_samples",
+            "unknown_corrections"
+          ],
+          "excluded": [
+            {
+              "reason": "unknown_corrections",
+              "count": 1
+            }
+          ]
+        },
+        "top_right": {
+          "included_samples": 0,
+          "excluded_samples": 1,
+          "mean_shift": null,
+          "scatter": null,
+          "blockers": [
+            "insufficient_samples",
+            "unknown_corrections"
+          ],
+          "excluded": [
+            {
+              "reason": "unknown_corrections",
+              "count": 1
+            }
+          ]
+        },
+        "bottom_left": {
+          "included_samples": 0,
+          "excluded_samples": 1,
+          "mean_shift": null,
+          "scatter": null,
+          "blockers": [
+            "insufficient_samples",
+            "unknown_corrections"
+          ],
+          "excluded": [
+            {
+              "reason": "unknown_corrections",
+              "count": 1
+            }
+          ]
+        },
+        "bottom_right": {
+          "included_samples": 0,
+          "excluded_samples": 1,
+          "mean_shift": null,
+          "scatter": null,
+          "blockers": [
+            "insufficient_samples",
+            "unknown_corrections"
+          ],
+          "excluded": [
+            {
+              "reason": "unknown_corrections",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "distortion": {
+        "included_samples": 0,
+        "excluded_samples": 1,
+        "mean_bow": null,
+        "scatter": null,
+        "blockers": [
+          "insufficient_samples",
+          "unknown_corrections"
+        ],
+        "excluded": [
+          {
+            "reason": "unknown_corrections",
+            "count": 1
+          }
+        ]
+      },
+      "frames": [
+        {
+          "input_index": 0,
+          "path": "example-missing-lens-identity.tif",
+          "aggregation_eligible": false,
+          "qa": {
+            "target": {
+              "method": null,
+              "status": "blocked",
+              "keystone_pct": null,
+              "tilt_axis": null,
+              "gate_threshold_pct": 1.5,
+              "blockers": [
+                "no_suitable_target_reference"
+              ]
+            }
+          },
+          "measurements": {
+            "sharpness": {
+              "zones": {
+                "centre": {
+                  "acutance": {
+                    "value": 0.9797188,
+                    "unit": "acutance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "contrast": {
+                    "value": 0.85460365,
+                    "unit": "ratio",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "luminance": {
+                    "value": 0.1207349,
+                    "unit": "linear_luminance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "texture_usable": {
+                    "value": true,
+                    "threshold": 0.15,
+                    "method": "derived_threshold"
+                  }
+                },
+                "top_left": {
+                  "acutance": {
+                    "value": 1.8397411,
+                    "unit": "acutance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "contrast": {
+                    "value": 1.0381546,
+                    "unit": "ratio",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "luminance": {
+                    "value": 0.050857253,
+                    "unit": "linear_luminance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "texture_usable": {
+                    "value": true,
+                    "threshold": 0.15,
+                    "method": "derived_threshold"
+                  }
+                },
+                "top_right": {
+                  "acutance": {
+                    "value": 1.703662,
+                    "unit": "acutance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "contrast": {
+                    "value": 0.5556283,
+                    "unit": "ratio",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "luminance": {
+                    "value": 0.19116314,
+                    "unit": "linear_luminance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "texture_usable": {
+                    "value": true,
+                    "threshold": 0.15,
+                    "method": "derived_threshold"
+                  }
+                },
+                "bottom_left": {
+                  "acutance": {
+                    "value": 0.0,
+                    "unit": "acutance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "contrast": {
+                    "value": 6.3832044e-7,
+                    "unit": "ratio",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "luminance": {
+                    "value": 0.21009882,
+                    "unit": "linear_luminance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "texture_usable": {
+                    "value": false,
+                    "threshold": 0.15,
+                    "method": "derived_threshold"
+                  }
+                },
+                "bottom_right": {
+                  "acutance": {
+                    "value": 1.5484743,
+                    "unit": "acutance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "contrast": {
+                    "value": 0.29362434,
+                    "unit": "ratio",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "luminance": {
+                    "value": 0.7843122,
+                    "unit": "linear_luminance",
+                    "method": "measured",
+                    "confidence": 0.0
+                  },
+                  "texture_usable": {
+                    "value": true,
+                    "threshold": 0.15,
+                    "method": "derived_threshold"
+                  }
+                }
+              }
+            },
+            "vignetting": {
+              "zones": {
+                "top_left": {
+                  "falloff": {
+                    "value": -1.2473173,
+                    "unit": "stops",
+                    "method": "measured_luminance_ratio"
+                  }
+                },
+                "top_right": {
+                  "falloff": {
+                    "value": 0.6629616,
+                    "unit": "stops",
+                    "method": "measured_luminance_ratio"
+                  }
+                },
+                "bottom_left": {
+                  "falloff": {
+                    "value": 0.7992253,
+                    "unit": "stops",
+                    "method": "measured_luminance_ratio"
+                  }
+                },
+                "bottom_right": {
+                  "falloff": {
+                    "value": 2.6995852,
+                    "unit": "stops",
+                    "method": "measured_luminance_ratio"
+                  }
+                }
+              }
+            },
+            "ca_lateral": {
+              "zones": {
+                "top_left": {
+                  "shift": {
+                    "x": {
+                      "value": -2.5,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    },
+                    "y": {
+                      "value": 1.5,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    },
+                    "magnitude": {
+                      "value": 2.9154758,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    }
+                  },
+                  "blockers": []
+                },
+                "top_right": {
+                  "shift": {
+                    "x": {
+                      "value": 1.0,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    },
+                    "y": {
+                      "value": 1.4838674,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    },
+                    "magnitude": {
+                      "value": 1.7893748,
+                      "unit": "px_fullres",
+                      "method": "measured_channel_correlation",
+                      "confidence": 1.0
+                    }
+                  },
+                  "blockers": []
+                },
+                "bottom_left": {
+                  "shift": null,
+                  "blockers": [
+                    "flat_profile"
+                  ]
+                },
+                "bottom_right": {
+                  "shift": null,
+                  "blockers": [
+                    "flat_profile"
+                  ]
+                }
+              }
+            },
+            "distortion": {
+              "candidate": {
+                "orientation": "vertical",
+                "reference_side": null,
+                "bow": {
+                  "value": 2.527089,
+                  "unit": "percent_frame",
+                  "method": "inferred_weak_reference_bow",
+                  "confidence": 0.4
+                },
+                "sagitta_px": 2.0216713,
+                "span_coverage": 1.0,
+                "fit_residual_px": 0.6521985
+              },
+              "blockers": [
+                "weak_reference_geometry"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

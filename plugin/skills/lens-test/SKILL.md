@@ -8,13 +8,13 @@ description: Interpret lenslab analyse JSON and coach lens-copy capture reshoots
 This Claude plugin skill is a thin adapter. The durable behaviour lives in the shared repo skill:
 
 ```text
-${CLAUDE_PROJECT_DIR}/agent-skills/lens-test/SKILL.md
+${CLAUDE_PLUGIN_ROOT}/../agent-skills/lens-test/SKILL.md
 ```
 
 Before acting, read that shared `SKILL.md` and its referenced files under:
 
 ```text
-${CLAUDE_PROJECT_DIR}/agent-skills/lens-test/references/
+${CLAUDE_PLUGIN_ROOT}/../agent-skills/lens-test/references/
 ```
 
 Do not duplicate or override the interpretation, reshoot, or capture-preflight rules here. Use this

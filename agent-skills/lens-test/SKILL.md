@@ -79,7 +79,9 @@ Use `references/interpreting-results.md` for the full interpretation rules and
 When support is blocked or inconclusive:
 
 - Show a prioritised blocker shortlist.
-- Pair every shown blocker with a concrete capture action.
+- Show only capture actions present in `copy_assessment.reshoot`.
+- When `copy_assessment.reshoot` is empty, say that the CLI prescribed no capture action. Do not
+  invent one from the blockers.
 - Prefer the smallest reshoot that can unblock hard support.
 - Reference `references/shooting-guide.md` only when the capture is broadly missing the protocol or
   the user asks for the full guide.

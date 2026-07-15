@@ -42,7 +42,9 @@ If the schema version differs, stop and say the binary/skill versions do not mat
 - Say the run is inconclusive.
 - Explain the blocker codes in user terms.
 - Do not say the lens is centred or decentred.
-- Move directly to the smallest useful reshoot actions.
+- Give only the actions present in `copy_assessment.reshoot`.
+- When `copy_assessment.reshoot` is empty, say that the CLI prescribed no capture action instead of
+  inventing one from the blockers.
 
 ## Measured vs Inferred
 
