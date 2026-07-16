@@ -13,10 +13,9 @@ to **Done** in the same change that completes it, with the commit or pull-reques
 
 ## Up Next
 
-- **Guided capture workflow / plugin interpretation boundary** — turn the `copy_assessment` evidence
-  into user-facing coaching and narrative interpretation without moving judgement into the CLI. The
-  first slice should inspect an explicit or folder-backed capture set, explain why support is
-  centred/decentred/inconclusive, and coach the smallest reshoot when hard support is blocked.
+- **Golden schema and numeric regression corpus** — turn the current evidence contracts into durable
+  public fixtures: byte-stable JSON snapshots plus controlled synthetic/target numeric cases that
+  catch schema drift and metric regressions before plugin or report work builds on them.
 
 ## Remaining v0.1 Measurement Backlog
 
@@ -38,7 +37,11 @@ acceptance criteria are met.
   getting useful output. The tool/plugin must inspect a sample set, explain missing aperture/target
   evidence, and coach the next capture without guessing from weak scene data. _Done when:_ a user
   can point the tool at a folder, get either a valid measurement run or precise reshoot
-  instructions, and no copy verdict is produced from uncontrolled inputs alone.
+  instructions, and no copy verdict is produced from uncontrolled inputs alone. _Status:_ PR #19's
+  head implements the portable skill/adapter and passes authenticated Claude fixture-interpretation
+  UAT for empty and CLI-prescribed `reshoot` lists. This blocker remains open pending live folder
+  UAT of direct-child expansion, inspect-before-analyse ordering, and CLI-prescribed reshoot
+  coaching.
 - **Golden schema and numeric regression corpus** — schema stability and metric accuracy need
   durable fixtures, not only unit tests for blockers. _Done when:_ controlled synthetic/target
   fixture sets assert known MTF/vignetting/CA/distortion/keystone/aperture-series values within
@@ -177,6 +180,18 @@ acceptance criteria are met.
   verdict omissions, decoded TIFF tests keep unknown-correction exclusion honest, and
   `just test-local-copy-assessment` provides a local-only real-DNG product-realism gate that skips
   when unconfigured — met by this change.
+- **Portable guided capture skill / Claude plugin adapter** — `agent-skills/lens-test` now owns the
+  shared product skill core for explicit-file or flat-folder capture preparation, representative
+  `lenslab inspect` preflight, `lenslab analyse <paths…>` interpretation, centred/decentred/
+  inconclusive support language, and prioritised reshoot coaching from `copy_assessment.blockers`
+  and `copy_assessment.reshoot`. `plugin/` provides a thin Claude plugin adapter and manifest
+  without duplicating the shared interpretation contract. Schema-real example JSON/checklist pairs
+  cover supported centred, supported decentred, target-QA blocked inconclusive, and incomplete
+  aperture-ladder inconclusive cases. _Done when:_ the shared skill core is the single source of
+  truth, the Claude adapter stays thin, examples parse as JSON and include at least one full current
+  `AnalyseReport` shape, and manual UAT/dry-review instructions are present without claiming
+  keep/return advice, generated reports, recursive folder discovery, or non-Claude adapters — met on
+  PR #19's head.
 
 ## Deferred / known gaps
 
@@ -226,6 +241,16 @@ Carried from initial workspace setup; revisit when the noted condition is met.
   locality worse than centralised reading. _Done when:_ serde output remains byte-stable for
   existing fixtures, schema versioning stays central, and new measurement families can add DTOs
   without editing an oversized catch-all module.
+- **Claude plugin marketplace distribution** — the current `plugin/` tree is a local Claude adapter
+  scaffold, not a self-contained marketplace install. Revisit when lenslab is ready to distribute
+  the guided capture flow to users through Claude Code. _Done when:_ the plugin has a marketplace
+  definition, the install path is tested through Claude's marketplace flow rather than only
+  `--plugin-dir`, and the packaging story keeps one source of truth for the shared
+  `agent-skills/lens-test` core. Candidate packaging shapes: generate a self-contained Claude plugin
+  package by copying the shared core into the plugin artefact at release time; make `plugin/` the
+  source of truth and point other harnesses at it; or introduce a dedicated package root that emits
+  Claude, Codex, opencode, and future harness adapters. Do not bundle CLI installation here until
+  the separate CLI release/distribution story is settled.
 - **Mixed scene/target copy scoring** — option 3 from the copy-assessment planning remains
   intentionally deferred. Scene or mixed captures may become useful as soft evidence after hard
   target-series support exists, but they must not promote uncontrolled scene data to a hard copy

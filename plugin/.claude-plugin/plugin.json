@@ -1,0 +1,6 @@
+{
+  "name": "lenslab",
+  "displayName": "lenslab",
+  "version": "0.1.0",
+  "description": "Agent skill for interpreting lenslab copy-assessment evidence and coaching capture reshoots."
+}

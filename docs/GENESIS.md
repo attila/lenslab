@@ -74,10 +74,12 @@ lenslab/
   lenslab-core/              # lib: image model, channels, zones, metrics, schema
   lenslab-decode/            # lib: Decoder trait + rawler/tiff impls (LGPL boundary lives here)
   lenslab-cli/               # bin: clap, orchestration, report rendering
-  plugin/                    # target Claude plugin; not implemented yet
+  agent-skills/lens-test/    # harness-neutral product skill core
+    SKILL.md
+    references/{shooting-guide.md,interpreting-results.md}
+  plugin/                    # Claude plugin adapter
     .claude-plugin/plugin.json
     skills/lens-test/SKILL.md
-    skills/lens-test/references/{shooting-guide.md,interpreting-results.md}
   tests/                     # real DNG fixture metadata and downloaded fixture location
   reference/
     prototype/               # THIS SESSION'S WORKING CODE — port from here

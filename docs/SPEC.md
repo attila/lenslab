@@ -67,10 +67,11 @@ DECISIONS option (c)).
 `clap` parsing, orchestration, report rendering (JSON via serde; Markdown brief; PNG/SVG artifacts
 via `plotters` + `image`). Owns process exit codes.
 
-### `plugin/` — Claude plugin
+### Agent skill and `plugin/` adapter
 
-`.claude-plugin/plugin.json` + `skills/lens-test/`. Orchestration and narrative only; shells out to
-the binary. See `SKILL_PLUGIN.md`.
+`agent-skills/lens-test/` owns the harness-neutral skill core. `plugin/` contains the thin Claude
+plugin adapter: `.claude-plugin/plugin.json` + `skills/lens-test/`. Orchestration and narrative
+only; shells out to the binary. See `SKILL_PLUGIN.md`.
 
 ## 4. Pipeline
 

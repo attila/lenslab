@@ -1,0 +1,59 @@
+{
+  "schema_version": "0.1-copy-assessment-support",
+  "tool_version": "0.1.0",
+  "inputs": [],
+  "field_curvature": {
+    "method": "inferred_aperture_lag_from_measured_acutance",
+    "summaries": []
+  },
+  "copy_assessment": {
+    "state": "supports_centred",
+    "method": "derived_from_target_qa_acutance_and_field_curvature",
+    "hard_support_eligible": true,
+    "lens_model": "Example 50mm",
+    "focal_length_mm": 50.0,
+    "included_aperture_groups": [5.6, 8.0, 11.0],
+    "evidence": {
+      "target_quality": {
+        "status": "passed",
+        "blockers": []
+      },
+      "correction_provenance": {
+        "status": "passed",
+        "blockers": []
+      },
+      "aperture_series": {
+        "status": "passed",
+        "blockers": []
+      },
+      "left_right_consistency": {
+        "status": "passed",
+        "blockers": []
+      },
+      "field_curvature_counterevidence": {
+        "status": "passed",
+        "blockers": []
+      },
+      "mean_top_pair_delta": {
+        "value": 0.02,
+        "unit": "acutance_delta",
+        "method": "derived_from_measured_acutance"
+      },
+      "mean_bottom_pair_delta": {
+        "value": 0.03,
+        "unit": "acutance_delta",
+        "method": "derived_from_measured_acutance"
+      },
+      "max_abs_pair_delta": {
+        "value": 0.05,
+        "unit": "acutance_delta",
+        "method": "derived_from_measured_acutance"
+      },
+      "centred_threshold": 0.08,
+      "decentred_threshold": 0.18
+    },
+    "blockers": [],
+    "reshoot": []
+  },
+  "groups": []
+}
