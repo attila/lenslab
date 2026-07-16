@@ -14,4 +14,5 @@ Source: `inconclusive-missing-lens-identity.json`.
 - Do not call the lens centred or decentred.
 - Do not guess the lens model or focal length.
 - Do not invent a capture action that is absent from `copy_assessment.reshoot`.
+- Do not suggest replacement input, an aperture series, a shooting protocol, or rerunning the CLI.
 - Do not give keep/return advice.

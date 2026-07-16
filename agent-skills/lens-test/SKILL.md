@@ -1,13 +1,13 @@
 ---
 name: lens-test
-description: Interpret lenslab analyse JSON, coach capture fixes, and keep the Rust CLI as the only measurement engine. Use when a user wants to assess a lens copy from DNG/TIFF captures, understand copy_assessment support, or get reshoot guidance.
+description: Interpret lenslab analyse JSON, relay only CLI-prescribed capture fixes, and keep the Rust CLI as the only measurement engine. Use when a user wants to assess a lens copy from DNG/TIFF captures, understand copy_assessment support, or get reshoot guidance.
 ---
 
 # Lens Test
 
 Use this skill to help a user prepare DNG/TIFF lens-test captures, run `lenslab inspect` and
 `lenslab analyse`, interpret the resulting `copy_assessment` evidence, and recommend the smallest
-reshoot needed when the result is inconclusive.
+CLI-prescribed reshoot when the result is inconclusive.
 
 ## Contract
 
@@ -79,12 +79,15 @@ Use `references/interpreting-results.md` for the full interpretation rules and
 When support is blocked or inconclusive:
 
 - Show a prioritised blocker shortlist.
-- Show only capture actions present in `copy_assessment.reshoot`.
-- When `copy_assessment.reshoot` is empty, say that the CLI prescribed no capture action. Do not
-  invent one from the blockers.
-- Prefer the smallest reshoot that can unblock hard support.
-- Reference `references/shooting-guide.md` only when the capture is broadly missing the protocol or
-  the user asks for the full guide.
+- Treat `copy_assessment.reshoot` as a strict allowlist for capture changes, replacement input, and
+  protocol advice.
+- When the list is non-empty, show only its actions and prefer the smallest one that can unblock
+  hard support.
+- When the list is empty, make the entire next-step content: "The CLI prescribed no capture action."
+  Do not suggest ideal input or a shooting protocol, or tell the user to rerun.
+- A generic request such as "what should I do next?" does not override an empty list. Reference
+  `references/shooting-guide.md` only when the user explicitly asks for the general protocol, and
+  make clear that it is not advice derived from this run.
 
 ## Required Output Shape
 
@@ -93,7 +96,7 @@ Keep the answer short and factual:
 1. Support state: centred support, decentred support, or inconclusive.
 2. Evidence: measured facts and inferred support, labelled honestly.
 3. Blockers or counterevidence.
-4. Prioritised reshoot actions, when needed.
+4. Prioritised reshoot actions only when `copy_assessment.reshoot` is non-empty.
 5. Explicit non-claims when the evidence does not support a hard answer.
 
 Use the examples in `references/examples/` as the interpretation contract. The checklists are the

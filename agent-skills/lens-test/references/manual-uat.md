@@ -16,7 +16,8 @@ Run this before treating the skill as ready.
    `lenslab analyse`.
 3. Confirm the skill runs `lenslab inspect <representative-file>` before `lenslab analyse`.
 4. Confirm inconclusive output explains the blockers and gives only actions present in
-   `copy_assessment.reshoot`; an empty list must not produce an invented action.
+   `copy_assessment.reshoot`; an empty list must not produce any prescriptive next step, including
+   replacement input, protocol, or rerun advice.
 
 If live plugin execution is unavailable, record that as residual risk. A dry review can check the
 instructions, but it does not prove the packaged skill is usable by an agent runtime.

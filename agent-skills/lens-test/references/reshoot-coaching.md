@@ -44,7 +44,9 @@ reshoot value.
 
 ## Output Rule
 
-Show the top blockers in order. Pair them only with actions present in `copy_assessment.reshoot`.
-When that list is empty, explain the blockers and say that the CLI prescribed no capture action; do
-not invent one. Do not paste the full shooting guide unless the user asks or the capture is missing
-the protocol entirely.
+Show the top blockers in order. Treat `copy_assessment.reshoot` as a strict allowlist for capture
+changes, replacement input, and protocol advice. When the list is empty, explain the blockers and
+make the entire next-step content: "The CLI prescribed no capture action." Do not suggest input,
+protocol, or rerun actions. A generic request for next steps does not override the empty list.
+Provide the full shooting guide only when the user explicitly asks for the general protocol, and
+make clear that it is not advice derived from this run.
