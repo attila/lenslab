@@ -37,7 +37,11 @@ acceptance criteria are met.
   getting useful output. The tool/plugin must inspect a sample set, explain missing aperture/target
   evidence, and coach the next capture without guessing from weak scene data. _Done when:_ a user
   can point the tool at a folder, get either a valid measurement run or precise reshoot
-  instructions, and no copy verdict is produced from uncontrolled inputs alone.
+  instructions, and no copy verdict is produced from uncontrolled inputs alone. _Status:_ PR #19's
+  head implements the portable skill/adapter and passes authenticated Claude fixture-interpretation
+  UAT for empty and CLI-prescribed `reshoot` lists. This blocker remains open pending live folder
+  UAT of direct-child expansion, inspect-before-analyse ordering, and CLI-prescribed reshoot
+  coaching.
 - **Golden schema and numeric regression corpus** — schema stability and metric accuracy need
   durable fixtures, not only unit tests for blockers. _Done when:_ controlled synthetic/target
   fixture sets assert known MTF/vignetting/CA/distortion/keystone/aperture-series values within
@@ -186,7 +190,8 @@ acceptance criteria are met.
   aperture-ladder inconclusive cases. _Done when:_ the shared skill core is the single source of
   truth, the Claude adapter stays thin, examples parse as JSON and include at least one full current
   `AnalyseReport` shape, and manual UAT/dry-review instructions are present without claiming
-  keep/return advice, generated reports, recursive folder discovery, or non-Claude adapters.
+  keep/return advice, generated reports, recursive folder discovery, or non-Claude adapters — met on
+  PR #19's head.
 
 ## Deferred / known gaps
 
